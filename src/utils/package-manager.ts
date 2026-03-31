@@ -1,6 +1,12 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
 export type PackageManager = "bun" | "npm" | "pnpm" | "yarn";
+
+// Timeout for dependency installation (5 minutes)
+const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
+
+// Track active child processes for cleanup
+const activeProcesses = new Set<ChildProcess>();
 
 export function detectPackageManager(): PackageManager {
   const userAgent = process.env.npm_config_user_agent?.toLowerCase() ?? "";
@@ -14,6 +20,11 @@ export function detectPackageManager(): PackageManager {
   }
 
   if (userAgent.startsWith("bun")) {
+    return "bun";
+  }
+
+  // Check if running under bun runtime (covers bun link scenario)
+  if (process.versions.bun || process.argv[0]?.includes("bun")) {
     return "bun";
   }
 
@@ -32,6 +43,18 @@ export async function installDependencies(
   await runCommand(packageManager, args, cwd);
 }
 
+/**
+ * Kill all active child processes. Called during cleanup/shutdown.
+ */
+export function killActiveProcesses(): void {
+  for (const child of activeProcesses) {
+    if (!child.killed) {
+      child.kill("SIGTERM");
+    }
+  }
+  activeProcesses.clear();
+}
+
 function runCommand(command: string, args: string[], cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -40,18 +63,36 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       shell: process.platform === "win32",
     });
 
+    activeProcesses.add(child);
+
+    // Timeout handler
+    const timeout = setTimeout(() => {
+      if (!child.killed) {
+        child.kill("SIGTERM");
+        activeProcesses.delete(child);
+        reject(new Error(`Command "${command} ${args.join(" ")}" timed out after ${INSTALL_TIMEOUT_MS / 1000}s.`));
+      }
+    }, INSTALL_TIMEOUT_MS);
+
+    const cleanup = (): void => {
+      clearTimeout(timeout);
+      activeProcesses.delete(child);
+    };
+
     child.once("error", (error) => {
-      reject(error);
+      cleanup();
+      reject(new Error(`Failed to run "${command}": ${error.message}`));
     });
 
     child.once("exit", (code) => {
+      cleanup();
       if (code === 0) {
         resolve();
         return;
       }
 
       const fullCommand = [command, ...args].join(" ");
-      reject(new Error(`Command \"${fullCommand}\" failed with exit code ${code}.`));
+      reject(new Error(`Command "${fullCommand}" failed with exit code ${code ?? "unknown"}.`));
     });
   });
 }

@@ -31,6 +31,7 @@ export type CreateCommandOptions = {
   readonly templateId: string | undefined;
   readonly addons: string | undefined;
   readonly install: boolean;
+  readonly useBun?: boolean;
 };
 
 export async function runCreateCommand(options: CreateCommandOptions): Promise<void> {
@@ -47,10 +48,12 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
   const baseTemplate = await resolveBaseTemplate(baseTemplates, options.templateId);
   const selectedAddons = await resolveAddons(availableAddons, options.addons);
   const targetDirectory = resolve(process.cwd(), projectName);
+  // For ".", use current directory name as package name
+  const packageName = projectName === "." ? basename(process.cwd()) : projectName;
 
   await ensureTargetDirectoryIsUsable(targetDirectory);
 
-  console.log(pc.cyan(`Scaffolding ${projectName} using base template ${baseTemplate.id}...`));
+  console.log(pc.cyan(`Scaffolding ${packageName} using base template ${baseTemplate.id}...`));
 
   await cp(baseTemplate.directory, targetDirectory, {
     recursive: true,
@@ -70,9 +73,9 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
 
   await renameIfExists(join(targetDirectory, "gitignore"), join(targetDirectory, ".gitignore"));
 
-  await rewritePackageName(targetDirectory, projectName);
+  await rewritePackageName(targetDirectory, packageName);
 
-  const packageManager = detectPackageManager();
+  const packageManager = options.useBun ? "bun" : "npm";
 
   if (options.install) {
     console.log(pc.cyan(`Installing dependencies with ${packageManager}...`));
@@ -103,6 +106,8 @@ async function resolveProjectName(providedProjectName?: string): Promise<string>
       message: "Project name",
       initial: "my-next-app",
       validate: (value) => (value.trim().length === 0 ? "Project name is required." : true),
+      stdin: process.stdin,
+      stdout: process.stdout,
     },
     {
       onCancel: () => {
@@ -143,6 +148,8 @@ async function resolveBaseTemplate(
         description: template.description,
         value: template.id,
       })),
+      stdin: process.stdin,
+      stdout: process.stdout,
     },
     {
       onCancel: () => {
@@ -168,7 +175,9 @@ async function resolveAddons(
     return [];
   }
 
-  if (providedAddonList?.trim()) {
+  // When providedAddonList is a string (even empty), the caller has explicitly
+  // specified which addons to use — skip the interactive prompt.
+  if (providedAddonList !== undefined) {
     const requestedAddonIds = providedAddonList
       .split(",")
       .map((addonId) => addonId.trim())
@@ -200,6 +209,8 @@ async function resolveAddons(
         description: addon.description,
         value: addon.id,
       })),
+      stdin: process.stdin,
+      stdout: process.stdout,
     },
     {
       onCancel: () => {
@@ -212,17 +223,63 @@ async function resolveAddons(
   return addons.filter((addon) => selectedAddonIds.includes(addon.id));
 }
 
+// Reserved names that shouldn't be used as project names
+const RESERVED_NAMES = [
+  "node_modules",
+  ".git",
+  ".github",
+  ".vscode",
+  "package.json",
+  "package-lock.json",
+  "bun.lock",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+];
+
+// Windows reserved device names
+const WINDOWS_RESERVED = [
+  "con", "prn", "aux", "nul",
+  "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+  "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
+
 function validateProjectName(projectName: string): string {
   if (projectName.length === 0) {
     throw new Error("Project name is required.");
   }
 
-  if (projectName === "." || projectName === "..") {
-    throw new Error('Project name cannot be "." or "..".');
+  // Allow "." to scaffold in current directory
+  if (projectName === ".") {
+    return projectName;
+  }
+
+  if (projectName === "..") {
+    throw new Error('Project name cannot be "..".');
   }
 
   if (/[\\/]/.test(projectName)) {
     throw new Error("Project name cannot contain path separators.");
+  }
+
+  // Check for reserved names
+  const lowerName = projectName.toLowerCase();
+  if (RESERVED_NAMES.includes(lowerName)) {
+    throw new Error(`"${projectName}" is a reserved name and cannot be used as a project name.`);
+  }
+
+  // Check for Windows reserved device names
+  if (WINDOWS_RESERVED.includes(lowerName) || WINDOWS_RESERVED.some(r => lowerName.startsWith(`${r}.`))) {
+    throw new Error(`"${projectName}" is a reserved system name and cannot be used.`);
+  }
+
+  // Check for invalid characters (only allow alphanumeric, dash, underscore, dot)
+  if (!/^[a-zA-Z0-9._-]+$/.test(projectName)) {
+    throw new Error("Project name can only contain letters, numbers, dashes, underscores, and dots.");
+  }
+
+  // Don't allow names starting with a dot (hidden files)
+  if (projectName.startsWith(".")) {
+    throw new Error("Project name cannot start with a dot.");
   }
 
   return projectName;
@@ -280,9 +337,14 @@ async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<vo
   const addonFilesDirectory = join(addon.directory, "files");
 
   try {
+    // First, merge skills-lock.json if it exists (before cp overwrites it)
+    await mergeSkillsLockfile(targetDirectory, addonFilesDirectory);
+    
     await cp(addonFilesDirectory, targetDirectory, {
       recursive: true,
       force: true,
+      // Skip skills-lock.json since we handle it separately via merge
+      filter: (src) => !src.endsWith("skills-lock.json"),
     });
     await restoreTemplateSymlinks(addonFilesDirectory, targetDirectory);
   } catch (error) {
@@ -292,6 +354,61 @@ async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<vo
   }
 
   await mergeAddonDependencies(targetDirectory, addon);
+}
+
+type SkillsLockfile = {
+  lockfileVersion?: number;
+  version?: number;
+  skills?: Record<string, unknown>;
+};
+
+async function mergeSkillsLockfile(targetDirectory: string, addonFilesDirectory: string): Promise<void> {
+  const targetLockPath = join(targetDirectory, "skills-lock.json");
+  const addonLockPath = join(addonFilesDirectory, "skills-lock.json");
+
+  // Check if addon has a skills-lock.json
+  let addonLockfile: SkillsLockfile;
+  try {
+    const rawAddonLock = await readFile(addonLockPath, "utf8");
+    addonLockfile = JSON.parse(rawAddonLock) as SkillsLockfile;
+  } catch {
+    // Addon doesn't have a skills-lock.json, nothing to merge
+    return;
+  }
+
+  // Check if target already has a skills-lock.json
+  let targetLockfile: SkillsLockfile;
+  try {
+    const rawTargetLock = await readFile(targetLockPath, "utf8");
+    targetLockfile = JSON.parse(rawTargetLock) as SkillsLockfile;
+  } catch {
+    // Target doesn't have one yet, just copy the addon's lockfile
+    await writeFile(targetLockPath, JSON.stringify(addonLockfile, null, 2) + "\n", "utf8");
+    return;
+  }
+
+  // Merge skills from both lockfiles
+  const mergedSkills = {
+    ...(targetLockfile.skills ?? {}),
+    ...(addonLockfile.skills ?? {}),
+  };
+
+  // Build merged lockfile, only including defined version keys
+  const mergedLockfile: Record<string, unknown> = {
+    skills: mergedSkills,
+  };
+
+  // Prefer lockfileVersion, fall back to version
+  const lockVersion = targetLockfile.lockfileVersion ?? addonLockfile.lockfileVersion;
+  const version = targetLockfile.version ?? addonLockfile.version;
+  
+  if (lockVersion !== undefined) {
+    mergedLockfile.lockfileVersion = lockVersion;
+  } else if (version !== undefined) {
+    mergedLockfile.version = version;
+  }
+
+  await writeFile(targetLockPath, JSON.stringify(mergedLockfile, null, 2) + "\n", "utf8");
 }
 
 async function mergeAddonDependencies(targetDirectory: string, addon: AddonInfo): Promise<void> {

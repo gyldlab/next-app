@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { render, Box, Text, useApp, useInput } from "ink";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { render, Text, useApp, useInput } from "ink";
 import {
   getBaseTemplates,
   getAddons,
@@ -7,321 +7,188 @@ import {
   type AddonInfo,
 } from "../core/templates.js";
 import { runCreateCommand } from "../commands/create.js";
-import animationConfig, {
-  type AnimationConfig,
-  calculateDiagonalIndex,
-  isHighlighted,
-} from "../config/animation.js";
+import animationConfig, { type AnimationConfig } from "../config/animation.js";
+import { type InteractiveResult } from "./types.js";
+import { AppLayout } from "./components/app-layout.js";
+import { TemplateSelector } from "./components/template-selector.js";
+import { AddonSelector } from "./components/addon-selector.js";
+import { NameInput } from "./components/name-input.js";
+import { ListMode } from "./components/list-mode.js";
 
-// Custom GYLDLAB ASCII logo - split into logo (G) and text parts
-const GYLDLAB_LOGO_PART = [
-  "                      ++++++++++++++++++++++++++++++++++++++      ",
-  "                      ++++++++++++++++++++++++++++++++++++++      ",
-  "                      ++++++++++++++++++++++++++++++++++++++      ",
-  "                      ++++++++++++++++++++++++++++++++++++++      ",
-  "            +++++++++++++++++++++++++++++++++++++++++++++++       ",
-  "            +++++++++++                                           ",
-  "            +++++++++++                               ++++++++++  ",
-  "            +++++++++++                              +++++++++++  ",
-  "            +++++++++++                              +++++++++++  ",
-  "            +++++++++++++++++++++++++++++++          +++++++++++  ",
-  "            ++++++++++++++++++++++++++++++++++       +++++++++++  ",
-  "              ++++++++++++++++++++++++++++++++++     +++++++++++  ",
-  "                 +++++++++++++++++++++++++++++++++++++++++++++++  ",
-  "                   +++++++++++++++++++++++++++++++++++++++++++++  ",
-  "                     +++++++++++++++++++++++++++++++++++++++++++  ",
-  "                                                                  ",
-];
+// ── Hooks ───────────────────────────────────────────────────────────
 
-const GYLDLAB_TEXT_PART = [
-  "                               88           88  88              88",
-  "                               88           88  88              88",
-  "                               88           88  88              88",
-  "      ,adPPYb,d8  8b       d8  88   ,adPPYb,88  88  ,adPPYYba,  88,dPPYba,",
-  '     a8"    `Y88  `8b     d8\'  88  a8"    `Y88  88  ""     `Y8  88P\'    "8a',
-  "     8b       88   `8b   d8'   88  8b       88  88  ,adPPPPP88  88       d8",
-  '     "8a,   ,d88    `8b,d8\'    88  "8a,   ,d88  88  88,    ,88  88b,   ,a8"',
-  '      `"YbbdP"Y8      Y88\'     88   `"8bbdP"Y8  88  `"8bbdP"Y8  8Y"Ybbd8"\'',
-  "      aa,    ,88      d8'                                                  ",
-  '       "Y8bbdP"      d8\'                                                   ',
-];
+/** Drives the logo + text sweep animations via two offset counters. */
+function useLogoAnimation(config: AnimationConfig) {
+  const [logoOffset, setLogoOffset] = useState(0);
+  const [textOffset, setTextOffset] = useState(0);
 
-// Animated logo component - settings controlled by config props
-const AnimatedLogo: React.FC<{
-  logoOffset: number;
-  textOffset: number;
-  config: AnimationConfig;
-}> = ({ logoOffset, textOffset, config }) => {
-  return (
-    <Box flexDirection="column">
-      {/* Logo part - controlled by animation config */}
-      {GYLDLAB_LOGO_PART.map((line, rowIndex) => {
-        const chars = line.split("");
-        return (
-          <Text key={`logo-${rowIndex}`}>
-            {chars.map((char, colIndex) => {
-              if (!config.logo.enabled) {
-                // Static white logo
-                return (
-                  <Text key={colIndex} color={config.logo.defaultColor}>
-                    {char}
-                  </Text>
-                );
-              }
+  useEffect(() => {
+    if (!config.logo.enabled) return;
+    const interval = setInterval(() => {
+      setLogoOffset((prev) => (prev + 1) % config.logo.cycleLength);
+    }, config.logo.speedMs);
+    return () => clearInterval(interval);
+  }, [config.logo.enabled, config.logo.cycleLength, config.logo.speedMs]);
 
-              // Animated logo with sweep line
-              const diagonalIndex = calculateDiagonalIndex(
-                rowIndex,
-                colIndex,
-                config.logo.direction,
-                config.logo.bandWidth,
-              );
+  useEffect(() => {
+    if (!config.text.enabled) return;
+    const interval = setInterval(() => {
+      setTextOffset((prev) => (prev + 1) % config.text.cycleLength);
+    }, config.text.speedMs);
+    return () => clearInterval(interval);
+  }, [config.text.enabled, config.text.cycleLength, config.text.speedMs]);
 
-              const highlighted = isHighlighted(
-                diagonalIndex,
-                logoOffset,
-                config.logo.sweepThickness,
-              );
-
-              const color = highlighted ? config.logo.highlightColor : config.logo.defaultColor;
-
-              return (
-                <Text key={colIndex} color={color}>
-                  {char}
-                </Text>
-              );
-            })}
-          </Text>
-        );
-      })}
-
-      {/* Text part - rainbow animation controlled by config */}
-      {GYLDLAB_TEXT_PART.map((line, rowIndex) => {
-        const chars = line.split("");
-        return (
-          <Text key={`text-${rowIndex}`}>
-            {chars.map((char, colIndex) => {
-              if (!config.text.enabled) {
-                // Static rainbow - use first color set based on position
-                const staticIndex = calculateDiagonalIndex(
-                  rowIndex,
-                  colIndex,
-                  config.text.direction,
-                  config.text.bandWidth,
-                );
-                const totalColors = config.text.colors.length;
-                const colorIndex = (totalColors - (staticIndex % totalColors)) % totalColors;
-                const color = config.text.colors[colorIndex]!;
-                return (
-                  <Text key={colIndex} color={color}>
-                    {char}
-                  </Text>
-                );
-              }
-
-              // Animated rainbow
-              // Use (offset - diagonalIndex) so direction matches logo sweep behavior
-              const diagonalIndex = calculateDiagonalIndex(
-                rowIndex,
-                colIndex,
-                config.text.direction,
-                config.text.bandWidth,
-              );
-
-              // Ensure positive modulo
-              const totalColors = config.text.colors.length;
-              const colorIndex =
-                (((textOffset - diagonalIndex) % totalColors) + totalColors) % totalColors;
-              const color = config.text.colors[colorIndex]!;
-
-              return (
-                <Text key={colIndex} color={color}>
-                  {char}
-                </Text>
-              );
-            })}
-          </Text>
-        );
-      })}
-    </Box>
-  );
-};
-
-// Template selector component
-interface TemplateSelectorProps {
-  templates: BaseTemplateInfo[];
-  selectedIndex: number;
+  return { logoOffset, textOffset };
 }
 
-const TemplateSelector: React.FC<TemplateSelectorProps> = ({ templates, selectedIndex }) => {
-  return (
-    <Box flexDirection="column" marginTop={1}>
-      <Text bold color="cyan">
-        Select a template (↑/↓ then Enter):
-      </Text>
-      <Box flexDirection="column" marginTop={1}>
-        {templates.map((template, index) => {
-          const isSelected = index === selectedIndex;
-          return (
-            <Box key={template.id}>
-              <Text color={isSelected ? "green" : "white"}>{isSelected ? "❯ " : "  "}</Text>
-              <Text color={isSelected ? "green" : "white"} bold={isSelected}>
-                {template.name}
-              </Text>
-              <Text color="gray"> - {template.description}</Text>
-            </Box>
-          );
-        })}
-      </Box>
-    </Box>
-  );
-};
+// ── InteractiveApp ──────────────────────────────────────────────────
 
-// List mode component - shows templates and addons
-interface ListModeProps {
-  logoOffset: number;
-  textOffset: number;
-  templates: BaseTemplateInfo[];
-  addons: AddonInfo[];
-  config: AnimationConfig;
-}
+type Phase = "enteringName" | "selectingTemplate" | "selectingAddons" | "creating";
 
-const ListMode: React.FC<ListModeProps> = ({
-  logoOffset,
-  textOffset,
-  templates,
-  addons,
-  config,
-}) => {
-  const { exit } = useApp();
-
-  useInput((input, key) => {
-    if (input === "q" || key.escape) {
-      exit();
-    }
-  });
-
-  return (
-    <Box flexDirection="column">
-      <AnimatedLogo logoOffset={logoOffset} textOffset={textOffset} config={config} />
-      <Text dimColor>create-gyld-next :: templates + addons + skills</Text>
-      <Text> </Text>
-      <Text bold color="cyan">
-        Base templates:
-      </Text>
-      {templates.map((t) => (
-        <Box key={t.id} flexDirection="column" marginLeft={1}>
-          <Text color="yellow">
-            • {t.id} {t.default ? "(default)" : ""}
-          </Text>
-          <Text> {t.name}</Text>
-          <Text dimColor> {t.description}</Text>
-        </Box>
-      ))}
-      <Text> </Text>
-      <Text bold color="cyan">
-        Add-ons:
-      </Text>
-      {addons.map((a) => (
-        <Box key={a.id} flexDirection="column" marginLeft={1}>
-          <Text color="yellow">• {a.id}</Text>
-          <Text> {a.name}</Text>
-          <Text dimColor> {a.description}</Text>
-        </Box>
-      ))}
-      <Text> </Text>
-      <Text dimColor>Press 'q' or Escape to exit</Text>
-    </Box>
-  );
-};
-
-// Main interactive app
 interface InteractiveAppProps {
   projectName: string | undefined;
-  install: boolean;
   mode: "create" | "list";
   templates: BaseTemplateInfo[];
   addons: AddonInfo[];
   config: AnimationConfig;
+  onComplete: (result: InteractiveResult) => void;
 }
 
 const InteractiveApp: React.FC<InteractiveAppProps> = ({
   projectName,
-  install,
   mode,
   templates,
   addons,
   config,
+  onComplete,
 }) => {
   const { exit } = useApp();
-  const [logoOffset, setLogoOffset] = useState(0);
-  const [textOffset, setTextOffset] = useState(0);
+  const { logoOffset, textOffset } = useLogoAnimation(config);
+
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [phase, setPhase] = useState<"selecting" | "creating" | "done">("selecting");
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>(
+    projectName ? "selectingTemplate" : "enteringName",
+  );
+  const [inputProjectName, setInputProjectName] = useState(projectName ?? "");
+  const [selectedTemplate, setSelectedTemplate] = useState<BaseTemplateInfo | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
+  const [addonIndex, setAddonIndex] = useState(0);
 
-  // Logo animation - controlled by config.logo
+  // Ref avoids stale closure issues with project name
+  const projectNameRef = useRef(projectName ?? "");
+
   useEffect(() => {
-    if (!config.logo.enabled) return;
+    projectNameRef.current = projectName ?? inputProjectName;
+  }, [projectName, inputProjectName]);
 
-    const interval = setInterval(() => {
-      setLogoOffset((prev) => (prev + 1) % config.logo.cycleLength);
-    }, config.logo.speedMs);
+  // ── Handlers ────────────────────────────────────────────────────
 
-    return () => clearInterval(interval);
-  }, [config.logo.enabled, config.logo.cycleLength, config.logo.speedMs]);
-
-  // Text animation - controlled by config.text
-  useEffect(() => {
-    if (!config.text.enabled) return;
-
-    const interval = setInterval(() => {
-      setTextOffset((prev) => (prev + 1) % config.text.cycleLength);
-    }, config.text.speedMs);
-
-    return () => clearInterval(interval);
-  }, [config.text.enabled, config.text.cycleLength, config.text.speedMs]);
-
-  // Handle template selection
-  const handleSelect = useCallback(async () => {
-    const template = templates[selectedIndex];
-    if (template && projectName) {
-      setSelectedTemplate(template.id);
+  const handleComplete = useCallback(
+    (template: BaseTemplateInfo, addonList: AddonInfo[]) => {
+      const name = projectNameRef.current;
+      if (!name) {
+        console.error("\nError: Project name is required.");
+        process.exitCode = 1;
+        exit();
+        return;
+      }
       setPhase("creating");
-
-      // Exit ink and run the create command
-      exit();
-
-      // Small delay to let ink cleanup
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      await runCreateCommand({
-        projectName,
+      onComplete({
+        projectName: name,
         templateId: template.id,
-        addons: undefined,
-        install,
+        addonIds: addonList.map((a) => a.id),
       });
-    }
-  }, [selectedIndex, templates, projectName, install, exit]);
-
-  // Keyboard input handling
-  useInput((input, key) => {
-    if (mode === "list") return; // List mode handles its own input
-
-    if (phase !== "selecting") return;
-
-    if (key.upArrow) {
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : templates.length - 1));
-    } else if (key.downArrow) {
-      setSelectedIndex((prev) => (prev < templates.length - 1 ? prev + 1 : 0));
-    } else if (key.return) {
-      void handleSelect();
-    } else if (input === "q" || key.escape) {
       exit();
+    },
+    [onComplete, exit],
+  );
+
+  const handleTemplateSelect = useCallback(() => {
+    const template = templates[selectedIndex];
+    if (template) {
+      setSelectedTemplate(template);
+      if (addons.length > 0) {
+        setPhase("selectingAddons");
+        setAddonIndex(0);
+      } else {
+        handleComplete(template, []);
+      }
+    }
+  }, [selectedIndex, templates, addons, handleComplete]);
+
+  const handleAddonComplete = useCallback(() => {
+    if (selectedTemplate) {
+      const list = addons.filter((a) => selectedAddons.has(a.id));
+      handleComplete(selectedTemplate, list);
+    }
+  }, [selectedTemplate, addons, selectedAddons, handleComplete]);
+
+  // ── Input ───────────────────────────────────────────────────────
+
+  useInput((input, key) => {
+    if (mode === "list") return;
+
+    // Project name entry
+    if (phase === "enteringName") {
+      if (key.return) {
+        if (inputProjectName.trim().length > 0) setPhase("selectingTemplate");
+      } else if (key.backspace || key.delete) {
+        setInputProjectName((prev) => prev.slice(0, -1));
+      } else if (key.escape || input === "q") {
+        if (inputProjectName.length === 0) exit();
+      } else if (input && !key.ctrl && !key.meta && input.length === 1) {
+        if (/[a-zA-Z0-9._-]/.test(input)) {
+          setInputProjectName((prev) => prev + input);
+        }
+      }
+      return;
+    }
+
+    // Template selection
+    if (phase === "selectingTemplate") {
+      if (key.upArrow) {
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : templates.length - 1));
+      } else if (key.downArrow) {
+        setSelectedIndex((prev) => (prev < templates.length - 1 ? prev + 1 : 0));
+      } else if (key.return) {
+        handleTemplateSelect();
+      } else if (input === "q" || key.escape) {
+        exit();
+      }
+    }
+
+    // Addon selection
+    if (phase === "selectingAddons") {
+      if (key.upArrow) {
+        setAddonIndex((prev) => (prev > 0 ? prev - 1 : addons.length - 1));
+      } else if (key.downArrow) {
+        setAddonIndex((prev) => (prev < addons.length - 1 ? prev + 1 : 0));
+      } else if (input === " ") {
+        const addon = addons[addonIndex];
+        if (addon) {
+          setSelectedAddons((prev) => {
+            const next = new Set(prev);
+            if (next.has(addon.id)) next.delete(addon.id);
+            else next.add(addon.id);
+            return next;
+          });
+        }
+      } else if (input === "a") {
+        if (selectedAddons.size === addons.length) setSelectedAddons(new Set());
+        else setSelectedAddons(new Set(addons.map((a) => a.id)));
+      } else if (key.return) {
+        handleAddonComplete();
+      } else if (key.escape) {
+        setPhase("selectingTemplate");
+        setSelectedTemplate(null);
+      } else if (input === "q") {
+        exit();
+      }
     }
   });
 
-  // List mode
+  // ── Render ──────────────────────────────────────────────────────
+
   if (mode === "list") {
     return (
       <ListMode
@@ -334,48 +201,84 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
     );
   }
 
-  // Create mode
-  if (phase === "creating") {
+  if (phase === "enteringName") {
     return (
-      <Box flexDirection="column">
-        <AnimatedLogo logoOffset={logoOffset} textOffset={textOffset} config={config} />
-        <Text dimColor>create-gyld-next :: templates + addons + skills</Text>
-        <Text> </Text>
-        <Text color="green">Creating project with template: {selectedTemplate}...</Text>
-      </Box>
+      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+        <NameInput value={inputProjectName} />
+      </AppLayout>
     );
   }
 
+  if (phase === "creating") {
+    return (
+      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+        <Text> </Text>
+        <Text color="green">Creating project with template: {selectedTemplate?.id}...</Text>
+      </AppLayout>
+    );
+  }
+
+  if (phase === "selectingAddons" && selectedTemplate) {
+    return (
+      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+        <AddonSelector
+          selectedTemplate={selectedTemplate}
+          addons={addons}
+          selectedAddons={selectedAddons}
+          focusedIndex={addonIndex}
+        />
+      </AppLayout>
+    );
+  }
+
+  // Default: template selection
   return (
-    <Box flexDirection="column">
-      <AnimatedLogo logoOffset={logoOffset} textOffset={textOffset} config={config} />
-      <Text dimColor>create-gyld-next :: templates + addons + skills</Text>
+    <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
       <TemplateSelector templates={templates} selectedIndex={selectedIndex} />
       <Text> </Text>
       <Text dimColor>Press 'q' or Escape to exit</Text>
-    </Box>
+    </AppLayout>
   );
 };
 
-// Export function to run interactive mode
+// ── Entry point ─────────────────────────────────────────────────────
+
 export async function runInteractiveMode(
   projectName: string | undefined,
   install: boolean,
   mode: "create" | "list" = "create",
+  useBun: boolean = false,
 ): Promise<void> {
-  // Load templates and addons first
   const [templates, addons] = await Promise.all([getBaseTemplates(), getAddons()]);
+
+  // Mutable container so TS doesn't narrow to `never` after await
+  const ref: { result: InteractiveResult } = { result: null };
+
+  const onComplete = (r: InteractiveResult): void => {
+    ref.result = r;
+  };
 
   const { waitUntilExit } = render(
     <InteractiveApp
       projectName={projectName}
-      install={install}
       mode={mode}
       templates={templates}
       addons={addons}
       config={animationConfig}
+      onComplete={onComplete}
     />,
   );
 
   await waitUntilExit();
+
+  // After Ink exits, run the create command if we have a result
+  if (ref.result) {
+    await runCreateCommand({
+      projectName: ref.result.projectName,
+      templateId: ref.result.templateId,
+      addons: ref.result.addonIds.length > 0 ? ref.result.addonIds.join(",") : "",
+      install,
+      useBun,
+    });
+  }
 }
