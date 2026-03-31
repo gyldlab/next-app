@@ -71,10 +71,12 @@ bun run lint
 bun run test
 ```
 
-Run the GSAP/skills scaffold smoke test:
+Run add-on smoke tests:
 
 ```bash
-bun run smoke:gsap-lenis
+bun run smoke:gsap-lenis   # GSAP + Lenis with skills
+bun run smoke:shadcn       # shadcn/ui with skills
+bun run smoke:elysia       # Elysia MVC with skills
 ```
 
 Animation guide:
@@ -106,16 +108,19 @@ create-gyld-next my-app
 To publish this package to npm:
 
 1. Build the package:
+
    ```bash
    bun run build
    ```
 
 2. Login to npm:
+
    ```bash
    npm login
    ```
 
 3. Publish (first time):
+
    ```bash
    npm publish --access public
    ```
@@ -127,6 +132,7 @@ To publish this package to npm:
    ```
 
 Users will then be able to run:
+
 ```bash
 npx @gyldlab/create-next-app my-app
 ```

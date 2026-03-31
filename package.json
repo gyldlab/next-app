@@ -22,7 +22,9 @@
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run --passWithNoTests",
-    "smoke:gsap-lenis": "bun ./scripts/smoke-gsap-lenis.ts"
+    "smoke:gsap-lenis": "bun ./scripts/smoke-gsap-lenis.ts",
+    "smoke:shadcn": "bun ./scripts/smoke-shadcn.ts",
+    "smoke:elysia": "bun ./scripts/smoke-elysia.ts"
   },
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
