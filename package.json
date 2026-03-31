@@ -25,14 +25,20 @@
     "smoke:gsap-lenis": "bun ./scripts/smoke-gsap-lenis.ts"
   },
   "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "chalk-animation": "^2.0.3",
     "commander": "^12.1.0",
     "figlet": "^1.11.0",
+    "ink": "^6.8.0",
     "picocolors": "^1.1.1",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "react": "^19.2.4"
   },
   "devDependencies": {
+    "@types/chalk-animation": "^1.6.3",
     "@types/node": "^22.15.29",
     "@types/prompts": "^2.4.9",
+    "@types/react": "^19.2.14",
     "asciify-image": "^0.1.10",
     "prettier": "^3.5.3",
     "sharp": "^0.34.5",

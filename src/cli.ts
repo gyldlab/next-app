@@ -4,37 +4,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import { runCreateCommand } from "./commands/create.js";
 import { runListTemplatesCommand } from "./commands/list-templates.js";
-
-// Custom GYLDLAB ASCII logo - matches the brand SVG
-const GYLDLAB_LOGO = `
-                      ++++++++++++++++++++++++++++++++++++++      
-                      ++++++++++++++++++++++++++++++++++++++      
-                      ++++++++++++++++++++++++++++++++++++++      
-                      ++++++++++++++++++++++++++++++++++++++      
-            +++++++++++++++++++++++++++++++++++++++++++++++       
-            +++++++++++                                           
-            +++++++++++                               ++++++++++  
-            +++++++++++                              +++++++++++  
-            +++++++++++                              +++++++++++  
-            +++++++++++++++++++++++++++++++          +++++++++++  
-            ++++++++++++++++++++++++++++++++++       +++++++++++  
-              ++++++++++++++++++++++++++++++++++     +++++++++++  
-                 +++++++++++++++++++++++++++++++++++++++++++++++  
-                   +++++++++++++++++++++++++++++++++++++++++++++  
-                     +++++++++++++++++++++++++++++++++++++++++++  
-                                                                                   
-                                                                                                                                          
-                               88           88  88              88           
-                               88           88  88              88           
-                               88           88  88              88           
-      ,adPPYb,d8  8b       d8  88   ,adPPYb,88  88  ,adPPYYba,  88,dPPYba,   
-     a8"    \`Y88  \`8b     d8'  88  a8"    \`Y88  88  ""     \`Y8  88P'    "8a  
-     8b       88   \`8b   d8'   88  8b       88  88  ,adPPPPP88  88       d8  
-     "8a,   ,d88    \`8b,d8'    88  "8a,   ,d88  88  88,    ,88  88b,   ,a8"  
-      \`"YbbdP"Y8      Y88'     88   \`"8bbdP"Y8  88  \`"8bbdP"Y8  8Y"Ybbd8"'   
-      aa,    ,88      d8'                                                    
-       "Y8bbdP"      d8'                                                     
-`;
+import { runInteractiveMode } from "./ui/interactive.js";
 
 type CreateOptions = {
   readonly template?: string;
@@ -55,12 +25,17 @@ program
   .option("-a, --addons <addon-ids>", "Comma-separated add-on IDs")
   .option("--no-install", "Skip dependency installation after scaffolding")
   .action(async (projectName: string | undefined, options: CreateOptions) => {
-    await runCreateCommand({
-      projectName,
-      templateId: options.template,
-      addons: options.addons,
-      install: options.install,
-    });
+    // If interactive TTY and no template specified, use interactive mode
+    if (process.stdout.isTTY && !options.template && projectName) {
+      await runInteractiveMode(projectName, options.install);
+    } else {
+      await runCreateCommand({
+        projectName,
+        templateId: options.template,
+        addons: options.addons,
+        install: options.install,
+      });
+    }
   });
 
 program
@@ -71,19 +46,28 @@ program
   .option("-a, --addons <addon-ids>", "Comma-separated add-on IDs")
   .option("--no-install", "Skip dependency installation after scaffolding")
   .action(async (projectName: string | undefined, options: CreateOptions) => {
-    await runCreateCommand({
-      projectName,
-      templateId: options.template,
-      addons: options.addons,
-      install: options.install,
-    });
+    // If interactive TTY and no template specified, use interactive mode
+    if (process.stdout.isTTY && !options.template && projectName) {
+      await runInteractiveMode(projectName, options.install);
+    } else {
+      await runCreateCommand({
+        projectName,
+        templateId: options.template,
+        addons: options.addons,
+        install: options.install,
+      });
+    }
   });
 
 program
   .command("templates")
-  .description("List all available templates")
+  .description("List all available templates with animated logo")
   .action(async () => {
-    await runListTemplatesCommand();
+    if (process.stdout.isTTY) {
+      await runInteractiveMode(undefined, true, "list");
+    } else {
+      await runListTemplatesCommand();
+    }
   });
 
 program.addHelpText(
@@ -101,49 +85,12 @@ Examples:
 
 async function main(): Promise<void> {
   try {
-    if (shouldShowBrandBanner(process.argv.slice(2))) {
-      printBrandBanner();
-    }
-
     await program.parseAsync(process.argv);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown CLI error occurred.";
     console.error(pc.red(`Error: ${message}`));
     process.exitCode = 1;
   }
-}
-
-function shouldShowBrandBanner(args: readonly string[]): boolean {
-  if (!process.stdout.isTTY) {
-    return false;
-  }
-
-  if (process.env.GYLDLAB_CLI_NO_BANNER === "1") {
-    return false;
-  }
-
-  return !args.includes("--version") && !args.includes("-v");
-}
-
-function printBrandBanner(): void {
-  // Print the custom GYLDLAB ASCII logo
-  for (const line of GYLDLAB_LOGO.split("\n")) {
-    console.log(pc.white(line));
-  }
-
-  console.log(pc.dim(centerLine("create-gyld-next :: templates + addons + skills")));
-  console.log();
-}
-
-function centerLine(line: string): string {
-  const terminalWidth = process.stdout.columns ?? 0;
-
-  if (terminalWidth <= line.length) {
-    return line;
-  }
-
-  const padding = Math.floor((terminalWidth - line.length) / 2);
-  return `${" ".repeat(padding)}${line}`;
 }
 
 void main();

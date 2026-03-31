@@ -77,6 +77,10 @@ Run the GSAP/skills scaffold smoke test:
 bun run smoke:gsap-lenis
 ```
 
+Animation guide:
+
+- See `docs/ANIMATION_GUIDE.md` for all banner animation settings and examples.
+
 ## Usage examples
 
 After building, run from dist:
