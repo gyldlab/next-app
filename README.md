@@ -2,7 +2,7 @@
 
 # create-gyldlab-next
 
-![GYLDLAB Banner](./docs/banner.png)
+![GYLDLAB Banner](https://raw.githubusercontent.com/gyldlab/next-app/main/docs/banner.png)
 
 **Built on a foundation of _SOVEREIGN ALCHEMY_**  
 _Transforming vision into production-ready Next.js applications through curated templates and add-ons._
