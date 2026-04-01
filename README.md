@@ -1,11 +1,11 @@
-# create-gyld-next
+# create-gyldlab-next
 
-CLI foundation for scaffolding organization-approved Next.js projects from your own templates.
+Built on a foundation of *SOVEREIGN ALCHEMY* — transforming vision into production-ready Next.js applications through curated templates and add-ons.
 
 ## Package Information
 
-- **Package name**: `@gyldlab/create-next-app` (npm package)
-- **Command name**: `create-gyld-next` (CLI command)
+- **Package name**: `@gyldlab/next` (npm package)
+- **Command name**: `create-gyldlab-next` (CLI command)
 - **Repository**: `gyldlab/next-app`
 - **License**: MIT
 
@@ -13,32 +13,32 @@ CLI foundation for scaffolding organization-approved Next.js projects from your 
 
 ```bash
 # Interactive mode with animated logo
-create-gyld-next
+create-gyldlab-next
 
 # Create in current directory
-create-gyld-next .
+create-gyldlab-next .
 
 # Create a new project
-create-gyld-next my-app
+create-gyldlab-next my-app
 
 # Skip prompts with template flag
-create-gyld-next my-app --template next
+create-gyldlab-next my-app --template next
 
 # Include specific add-ons
-create-gyld-next my-app --template next --addons gsap-lenis,shadcn
+create-gyldlab-next my-app --template next --addons gsap-lenis,shadcn
 
 # Use bun instead of npm
-create-gyld-next my-app -b
-create-gyld-next my-app --bun
+create-gyldlab-next my-app -b
+create-gyldlab-next my-app --bun
 
 # Skip dependency installation
-create-gyld-next my-app --no-install
+create-gyldlab-next my-app --no-install
 
 # Show detailed error traces
-create-gyld-next my-app --debug
+create-gyldlab-next my-app --debug
 
 # List available templates
-create-gyld-next templates
+create-gyldlab-next templates
 ```
 
 ## CLI Flags
@@ -163,8 +163,8 @@ Then test from any directory:
 
 ```bash
 cd /tmp
-create-gyld-next test-project
-create-gyld-next test-project --template next --addons elysia,gsap-lenis -b
+create-gyldlab-next test-project
+create-gyldlab-next test-project --template next --addons elysia,gsap-lenis -b
 ```
 
 ## Publishing to npm
@@ -198,9 +198,9 @@ To publish this package to npm:
 Users will then be able to run:
 
 ```bash
-npx @gyldlab/create-next-app my-app
+npx @gyldlab/next my-app
 # Or with bun
-bunx @gyldlab/create-next-app my-app -b
+bunx @gyldlab/next my-app -b
 ```
 
 ## Add your own templates

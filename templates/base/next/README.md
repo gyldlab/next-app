@@ -1,6 +1,6 @@
 # Project Name
 
-This project was scaffolded with [`create-gyld-next`](https://github.com/gyldlab/next-app) — a CLI for bootstrapping organization-approved Next.js projects from pre-built templates.
+Built on a foundation of *SOVEREIGN ALCHEMY*, this project utilizes [`create-gyldlab-next`](https://github.com/gyldlab/next-app) to turn vision into high-performance digital reality.
 
 ## Getting Started
 
@@ -62,7 +62,7 @@ If you included add-ons during scaffolding, see their respective documentation:
 
 - [Next.js Documentation](https://nextjs.org/docs) — Features and API reference
 - [Learn Next.js](https://nextjs.org/learn) — Interactive tutorial
-- [create-gyld-next CLI](https://github.com/gyldlab/next-app) — Template CLI documentation
+- [create-gyldlab-next CLI](https://github.com/gyldlab/next-app) — Template CLI documentation
 
 ## Deploy
 

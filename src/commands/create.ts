@@ -128,7 +128,7 @@ async function resolveBaseTemplate(
 
     if (!exactMatch) {
       throw new Error(
-        `Base template "${providedTemplateId}" was not found. Run "create-gyld-next templates" to view all options.`,
+        `Base template "${providedTemplateId}" was not found. Run "create-gyldlab-next templates" to view all options.`,
       );
     }
 
@@ -189,7 +189,7 @@ async function resolveAddons(
       const addon = addons.find((candidate) => candidate.id === addonId);
       if (!addon) {
         throw new Error(
-          `Add-on "${addonId}" was not found. Run "create-gyld-next templates" to view all options.`,
+          `Add-on "${addonId}" was not found. Run "create-gyldlab-next templates" to view all options.`,
         );
       }
       selectedAddons.push(addon);

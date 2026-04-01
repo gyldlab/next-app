@@ -1,11 +1,11 @@
 {
-  "name": "@gyldlab/create-next-app",
+  "name": "@gyldlab/next",
   "version": "0.1.0",
   "description": "CLI for scaffolding organization-approved Next.js projects from templates.",
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
-    "create-gyld-next": "./dist/cli.js"
+    "create-gyldlab-next": "./dist/cli.js"
   },
   "files": [
     "dist",

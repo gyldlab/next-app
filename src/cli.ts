@@ -35,7 +35,7 @@ const EXIT_CANCELLED = 130; // Script terminated by Ctrl+C
 const program = new Command();
 
 program
-  .name("create-gyld-next")
+  .name("create-gyldlab-next")
   .description("Scaffold organization-approved Next.js projects from pre-built templates.")
   .version("0.1.0");
 
@@ -102,14 +102,14 @@ program.addHelpText(
   "after",
   `
 Examples:
-  create-gyld-next                                   Interactive mode with logo
-  create-gyld-next my-app                            Interactive template/addon selection
-  create-gyld-next my-app --template next            Skip prompts, use specified template
-  create-gyld-next my-app --template next -b         Use bun instead of npm
-  create-gyld-next my-app --addons gsap-lenis        Include specific addons
-  create-gyld-next my-app --no-install               Skip dependency installation
-  create-gyld-next my-app --debug                    Show detailed error traces
-  create-gyld-next templates                         List available templates
+  create-gyldlab-next                                   Interactive mode with logo
+  create-gyldlab-next my-app                            Interactive template/addon selection
+  create-gyldlab-next my-app --template next            Skip prompts, use specified template
+  create-gyldlab-next my-app --template next -b         Use bun instead of npm
+  create-gyldlab-next my-app --addons gsap-lenis        Include specific addons
+  create-gyldlab-next my-app --no-install               Skip dependency installation
+  create-gyldlab-next my-app --debug                    Show detailed error traces
+  create-gyldlab-next templates                         List available templates
 `,
 );
 
