@@ -9,6 +9,7 @@ import {
 import { runCreateCommand } from "../commands/create.js";
 import animationConfig, { type AnimationConfig } from "../config/animation.js";
 import { type InteractiveResult } from "./types.js";
+import { type PackageManager } from "../utils/package-manager.js";
 import { AppLayout } from "./components/app-layout.js";
 import { TemplateSelector } from "./components/template-selector.js";
 import { AddonSelector } from "./components/addon-selector.js";
@@ -66,9 +67,7 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   const { logoOffset, textOffset } = useLogoAnimation(config);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>(
-    projectName ? "selectingTemplate" : "enteringName",
-  );
+  const [phase, setPhase] = useState<Phase>(projectName ? "selectingTemplate" : "enteringName");
   const [inputProjectName, setInputProjectName] = useState(projectName ?? "");
   const [selectedTemplate, setSelectedTemplate] = useState<BaseTemplateInfo | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
@@ -247,7 +246,7 @@ export async function runInteractiveMode(
   projectName: string | undefined,
   install: boolean,
   mode: "create" | "list" = "create",
-  useBun: boolean = false,
+  packageManager?: PackageManager,
 ): Promise<void> {
   const [templates, addons] = await Promise.all([getBaseTemplates(), getAddons()]);
 
@@ -278,7 +277,7 @@ export async function runInteractiveMode(
       templateId: ref.result.templateId,
       addons: ref.result.addonIds.length > 0 ? ref.result.addonIds.join(",") : "",
       install,
-      useBun,
+      packageManager,
     });
   }
 }

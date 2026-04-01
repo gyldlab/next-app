@@ -1,57 +1,97 @@
+<div align="center">
+
 # create-gyldlab-next
 
-Built on a foundation of *SOVEREIGN ALCHEMY* — transforming vision into production-ready Next.js applications through curated templates and add-ons.
+![GYLDLAB Banner](./docs/banner.png)
+
+**Built on a foundation of _SOVEREIGN ALCHEMY_**  
+_Transforming vision into production-ready Next.js applications through curated templates and add-ons._
+
+[![npm version](https://img.shields.io/npm/v/create-gyldlab-next.svg)](https://www.npmjs.com/package/create-gyldlab-next)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
 
 ## Package Information
 
-- **Package name**: `@gyldlab/next` (npm package)
-- **Command name**: `create-gyldlab-next` (CLI command)
-- **Repository**: `gyldlab/next-app`
+- **Package name**: `create-gyldlab-next`
+- **Repository**: [gyldlab/next-app](https://github.com/gyldlab/next-app)
 - **License**: MIT
 
 ## Quick Start
 
 ```bash
-# Interactive mode with animated logo
-create-gyldlab-next
+# Using npm create (like create-next-app)
+npm create gyldlab-next my-app
+
+# Using bun create
+bun create gyldlab-next my-app
+
+# Using pnpm create
+pnpm create gyldlab-next my-app
+
+# Using yarn create
+yarn create gyldlab-next my-app
 
 # Create in current directory
-create-gyldlab-next .
+npm create gyldlab-next .
 
-# Create a new project
-create-gyldlab-next my-app
+```
 
+The package manager is auto-detected from how you invoke the CLI.
+
+## Usage Examples
+
+```bash
 # Skip prompts with template flag
-create-gyldlab-next my-app --template next
+npm create gyldlab-next my-app -- --template next
 
 # Include specific add-ons
-create-gyldlab-next my-app --template next --addons gsap-lenis,shadcn
+npm create gyldlab-next my-app -- --addons gsap-lenis,shadcn
 
-# Use bun instead of npm
-create-gyldlab-next my-app -b
-create-gyldlab-next my-app --bun
+# Package manager flags (override auto-detection)
+npm create gyldlab-next my-app -- -b       # Use bun
+npm create gyldlab-next my-app -- -p       # Use pnpm
+npm create gyldlab-next my-app -- -y       # Use yarn
 
 # Skip dependency installation
-create-gyldlab-next my-app --no-install
+npm create gyldlab-next my-app -- --no-install
 
 # Show detailed error traces
-create-gyldlab-next my-app --debug
+npm create gyldlab-next my-app -- --debug
 
 # List available templates
-create-gyldlab-next templates
+npm create gyldlab-next -- templates
 ```
+
+> **Note**: When using `npm create` with flags, use `--` before the flags to pass them to the CLI.
+
+## Package Manager
+
+The CLI auto-detects the package manager based on how you invoke it:
+
+| Invocation                       | Auto-detected |
+| -------------------------------- | ------------- |
+| `npm create gyldlab-next`        | npm           |
+| `bun create gyldlab-next`        | bun           |
+| `pnpm create gyldlab-next`       | pnpm          |
+| `yarn create gyldlab-next`       | yarn          |
+
+Use flags to override auto-detection: `-b` (bun), `-p` (pnpm), `-y` (yarn).
 
 ## CLI Flags
 
-| Flag | Alias | Description |
-|------|-------|-------------|
-| `--template <id>` | `-t` | Use a specific base template (skips template prompt) |
-| `--addons <ids>` | `-a` | Comma-separated add-on IDs to include |
-| `--bun` | `-b` | Use bun as package manager (default: npm) |
-| `--no-install` | | Skip dependency installation after scaffolding |
-| `--debug` | | Show detailed error stack traces |
-| `--help` | `-h` | Show help information |
-| `--version` | `-V` | Show CLI version |
+| Flag              | Alias | Description                                          |
+| ----------------- | ----- | ---------------------------------------------------- |
+| `--template <id>` | `-t`  | Use a specific base template (skips template prompt) |
+| `--addons <ids>`  | `-a`  | Comma-separated add-on IDs to include                |
+| `--bun`           | `-b`  | Use bun as package manager                           |
+| `--pnpm`          | `-p`  | Use pnpm as package manager                          |
+| `--yarn`          | `-y`  | Use yarn as package manager                          |
+| `--no-install`    |       | Skip dependency installation after scaffolding       |
+| `--debug`         |       | Show detailed error stack traces                     |
+| `--help`          | `-h`  | Show help information                                |
+| `--version`       | `-V`  | Show CLI version                                     |
 
 ## Interactive Mode
 
@@ -96,32 +136,32 @@ bun install
 Run the CLI in development mode:
 
 ```bash
-bun run dev -- my-app
-bun run dev -- my-app --template next --addons gsap-lenis -b
+bun dev -- my-app
+bun dev -- my-app --template next --addons gsap-lenis -b
 ```
 
 Disable the startup banner when needed:
 
 ```bash
-GYLDLAB_CLI_NO_BANNER=1 bun run dev -- my-app
+GYLDLAB_CLI_NO_BANNER=1 bun dev -- my-app
 ```
 
 Set custom banner brand text:
 
 ```bash
-GYLDLAB_CLI_BRAND="YOUR BRAND" bun run dev -- my-app
+GYLDLAB_CLI_BRAND="YOUR BRAND" bun dev -- my-app
 ```
 
 Set custom banner font (figlet font name):
 
 ```bash
-GYLDLAB_CLI_FONT="ANSI Shadow" bun run dev -- my-app
+GYLDLAB_CLI_FONT="ANSI Shadow" bun dev -- my-app
 ```
 
 List templates:
 
 ```bash
-bun run dev -- templates
+bun dev -- templates
 ```
 
 Build the CLI:
@@ -133,17 +173,17 @@ bun run build
 Type-check, lint, test:
 
 ```bash
-bun run typecheck
-bun run lint
-bun run test
+bun typecheck
+bun lint
+bun test
 ```
 
 Run add-on smoke tests:
 
 ```bash
-bun run smoke:gsap-lenis   # GSAP + Lenis with skills
-bun run smoke:shadcn       # shadcn/ui with skills
-bun run smoke:elysia       # Elysia MVC with skills
+bun smoke:gsap-lenis   # GSAP + Lenis with skills
+bun smoke:shadcn       # shadcn/ui with skills
+bun smoke:elysia       # Elysia MVC with skills
 ```
 
 Animation guide:
@@ -198,9 +238,11 @@ To publish this package to npm:
 Users will then be able to run:
 
 ```bash
-npx @gyldlab/next my-app
-# Or with bun
-bunx @gyldlab/next my-app -b
+npm create gyldlab-next my-app
+# Or with other package managers
+bun create gyldlab-next my-app
+pnpm create gyldlab-next my-app
+yarn create gyldlab-next my-app
 ```
 
 ## Add your own templates
