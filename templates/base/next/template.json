@@ -1,0 +1,6 @@
+{
+  "id": "next",
+  "name": "Next.js Base",
+  "description": "Base Next.js starter generated with create-next-app.",
+  "default": true
+}

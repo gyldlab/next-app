@@ -1,0 +1,51 @@
+{
+  "name": "@gyldlab/next",
+  "version": "0.1.0",
+  "description": "CLI for scaffolding organization-approved Next.js projects from templates.",
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": {
+    "create-gyldlab-next": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "bun test",
+    "smoke:gsap-lenis": "bun ./scripts/smoke-gsap-lenis.ts",
+    "smoke:shadcn": "bun ./scripts/smoke-shadcn.ts",
+    "smoke:elysia": "bun ./scripts/smoke-elysia.ts"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "chalk-animation": "^2.0.3",
+    "commander": "^12.1.0",
+    "figlet": "^1.11.0",
+    "ink": "^6.8.0",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "@types/chalk-animation": "^1.6.3",
+    "@types/prompts": "^2.4.9",
+    "@types/react": "^19.2.14",
+    "asciify-image": "^0.1.10",
+    "prettier": "^3.5.3",
+    "sharp": "^0.34.5",
+    "svg2img": "^1.0.0-beta.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3"
+  }
+}

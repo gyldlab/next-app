@@ -1,0 +1,18 @@
+{
+  "id": "shadcn",
+  "name": "shadcn/ui",
+  "description": "Beautifully designed, accessible UI components built with Radix UI and Tailwind CSS.",
+  "dependencies": {
+    "@hugeicons/react": "^1.1.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.5.0",
+    "radix-ui": "^1.4.3",
+    "shadcn": "^4.1.1"
+  },
+  "skills": {
+    "source": "https://github.com/shadcn-ui/ui",
+    "bundled": ["shadcn"],
+    "updateCheckCommand": "bun x skills check"
+  }
+}
