@@ -52,7 +52,7 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ logoOffset, textOffs
       {/* Top spacing */}
       <Text> </Text>
       <Text> </Text>
-      
+
       {/* Logo part - controlled by animation config */}
       {GYLDLAB_LOGO_PART.map((line, rowIndex) => {
         const chars = line.split("");
@@ -142,7 +142,7 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ logoOffset, textOffs
           </Text>
         );
       })}
-      
+
       {/* Bottom spacing */}
       <Text> </Text>
       <Text> </Text>

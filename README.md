@@ -70,12 +70,12 @@ npm create gyldlab-next -- templates
 
 The CLI auto-detects the package manager based on how you invoke it:
 
-| Invocation                       | Auto-detected |
-| -------------------------------- | ------------- |
-| `npm create gyldlab-next`        | npm           |
-| `bun create gyldlab-next`        | bun           |
-| `pnpm create gyldlab-next`       | pnpm          |
-| `yarn create gyldlab-next`       | yarn          |
+| Invocation                 | Auto-detected |
+| -------------------------- | ------------- |
+| `npm create gyldlab-next`  | npm           |
+| `bun create gyldlab-next`  | bun           |
+| `pnpm create gyldlab-next` | pnpm          |
+| `yarn create gyldlab-next` | yarn          |
 
 Use flags to override auto-detection: `-b` (bun), `-p` (pnpm), `-y` (yarn).
 

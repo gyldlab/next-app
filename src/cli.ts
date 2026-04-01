@@ -5,10 +5,7 @@ import pc from "picocolors";
 import { runCreateCommand } from "./commands/create.js";
 import { runListTemplatesCommand } from "./commands/list-templates.js";
 import { runInteractiveMode } from "./ui/interactive.js";
-import {
-  killActiveProcesses,
-  type PackageManager,
-} from "./utils/package-manager.js";
+import { killActiveProcesses, type PackageManager } from "./utils/package-manager.js";
 
 type CreateOptions = {
   readonly template?: string;
@@ -24,9 +21,7 @@ type CreateOptions = {
  * Resolve the package manager from CLI flags.
  * Returns undefined if no flag is set (auto-detect will be used).
  */
-function resolvePackageManagerFromFlags(
-  options: CreateOptions,
-): PackageManager | undefined {
+function resolvePackageManagerFromFlags(options: CreateOptions): PackageManager | undefined {
   if (options.bun) return "bun";
   if (options.pnpm) return "pnpm";
   if (options.yarn) return "yarn";
