@@ -35,6 +35,7 @@
   "files": [
     "dist",
     "templates",
+    "docs",
     "README.md"
   ],
   "engines": {
