@@ -8,26 +8,46 @@ const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 // Track active child processes for cleanup
 const activeProcesses = new Set<ChildProcess>();
 
+/**
+ * Detect the package manager based on how the CLI was invoked.
+ * Priority:
+ * 1. npm_config_user_agent (set by npx/pnpx/yarn dlx/bunx)
+ * 2. process.versions.bun (running under bun runtime)
+ * 3. process.argv[0] contains "bun" (bun link scenario)
+ * 4. Default to npm
+ */
 export function detectPackageManager(): PackageManager {
+  // Check npm_config_user_agent first (most reliable for npx/bunx/pnpx/yarn dlx)
   const userAgent = process.env.npm_config_user_agent?.toLowerCase() ?? "";
 
-  if (userAgent.startsWith("pnpm")) {
+  if (userAgent.includes("bun")) {
+    return "bun";
+  }
+
+  if (userAgent.includes("pnpm")) {
     return "pnpm";
   }
 
-  if (userAgent.startsWith("yarn")) {
+  if (userAgent.includes("yarn")) {
     return "yarn";
   }
 
-  if (userAgent.startsWith("bun")) {
+  if (userAgent.includes("npm")) {
+    return "npm";
+  }
+
+  // Check if running under bun runtime (covers bun link and direct bun execution)
+  if (process.versions.bun) {
     return "bun";
   }
 
-  // Check if running under bun runtime (covers bun link scenario)
-  if (process.versions.bun || process.argv[0]?.includes("bun")) {
+  // Check if invoked via bun command
+  const execPath = process.argv[0]?.toLowerCase() ?? "";
+  if (execPath.includes("bun")) {
     return "bun";
   }
 
+  // Default to npm
   return "npm";
 }
 
@@ -70,7 +90,11 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       if (!child.killed) {
         child.kill("SIGTERM");
         activeProcesses.delete(child);
-        reject(new Error(`Command "${command} ${args.join(" ")}" timed out after ${INSTALL_TIMEOUT_MS / 1000}s.`));
+        reject(
+          new Error(
+            `Command "${command} ${args.join(" ")}" timed out after ${INSTALL_TIMEOUT_MS / 1000}s.`,
+          ),
+        );
       }
     }, INSTALL_TIMEOUT_MS);
 

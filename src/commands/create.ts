@@ -23,6 +23,7 @@ import {
   detectPackageManager,
   formatRunDevCommand,
   installDependencies,
+  type PackageManager,
 } from "../utils/package-manager.js";
 import { toValidPackageName } from "../utils/project-name.js";
 
@@ -31,7 +32,7 @@ export type CreateCommandOptions = {
   readonly templateId: string | undefined;
   readonly addons: string | undefined;
   readonly install: boolean;
-  readonly useBun?: boolean;
+  readonly packageManager?: PackageManager | undefined;
 };
 
 export async function runCreateCommand(options: CreateCommandOptions): Promise<void> {
@@ -75,7 +76,8 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
 
   await rewritePackageName(targetDirectory, packageName);
 
-  const packageManager = options.useBun ? "bun" : "npm";
+  // Use explicit package manager if provided, otherwise auto-detect
+  const packageManager = options.packageManager ?? detectPackageManager();
 
   if (options.install) {
     console.log(pc.cyan(`Installing dependencies with ${packageManager}...`));
@@ -238,9 +240,28 @@ const RESERVED_NAMES = [
 
 // Windows reserved device names
 const WINDOWS_RESERVED = [
-  "con", "prn", "aux", "nul",
-  "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
-  "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9",
 ];
 
 function validateProjectName(projectName: string): string {
@@ -257,8 +278,20 @@ function validateProjectName(projectName: string): string {
     throw new Error('Project name cannot be "..".');
   }
 
+  // Allow absolute paths (for programmatic use)
+  // But validate the basename for relative paths
+  const isAbsolutePath = projectName.startsWith("/") || /^[A-Za-z]:[\\/]/.test(projectName);
+
+  if (isAbsolutePath) {
+    // For absolute paths, just return as-is (validation happens at directory level)
+    return projectName;
+  }
+
+  // For relative paths, don't allow path separators (must be a simple name)
   if (/[\\/]/.test(projectName)) {
-    throw new Error("Project name cannot contain path separators.");
+    throw new Error(
+      "Project name cannot contain path separators. Use an absolute path or a simple name.",
+    );
   }
 
   // Check for reserved names
@@ -268,13 +301,18 @@ function validateProjectName(projectName: string): string {
   }
 
   // Check for Windows reserved device names
-  if (WINDOWS_RESERVED.includes(lowerName) || WINDOWS_RESERVED.some(r => lowerName.startsWith(`${r}.`))) {
+  if (
+    WINDOWS_RESERVED.includes(lowerName) ||
+    WINDOWS_RESERVED.some((r) => lowerName.startsWith(`${r}.`))
+  ) {
     throw new Error(`"${projectName}" is a reserved system name and cannot be used.`);
   }
 
   // Check for invalid characters (only allow alphanumeric, dash, underscore, dot)
   if (!/^[a-zA-Z0-9._-]+$/.test(projectName)) {
-    throw new Error("Project name can only contain letters, numbers, dashes, underscores, and dots.");
+    throw new Error(
+      "Project name can only contain letters, numbers, dashes, underscores, and dots.",
+    );
   }
 
   // Don't allow names starting with a dot (hidden files)
@@ -339,7 +377,7 @@ async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<vo
   try {
     // First, merge skills-lock.json if it exists (before cp overwrites it)
     await mergeSkillsLockfile(targetDirectory, addonFilesDirectory);
-    
+
     await cp(addonFilesDirectory, targetDirectory, {
       recursive: true,
       force: true,
@@ -362,7 +400,10 @@ type SkillsLockfile = {
   skills?: Record<string, unknown>;
 };
 
-async function mergeSkillsLockfile(targetDirectory: string, addonFilesDirectory: string): Promise<void> {
+async function mergeSkillsLockfile(
+  targetDirectory: string,
+  addonFilesDirectory: string,
+): Promise<void> {
   const targetLockPath = join(targetDirectory, "skills-lock.json");
   const addonLockPath = join(addonFilesDirectory, "skills-lock.json");
 
@@ -401,7 +442,7 @@ async function mergeSkillsLockfile(targetDirectory: string, addonFilesDirectory:
   // Prefer lockfileVersion, fall back to version
   const lockVersion = targetLockfile.lockfileVersion ?? addonLockfile.lockfileVersion;
   const version = targetLockfile.version ?? addonLockfile.version;
-  
+
   if (lockVersion !== undefined) {
     mergedLockfile.lockfileVersion = lockVersion;
   } else if (version !== undefined) {

@@ -26,13 +26,13 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: undefined, // No addons
         install: false, // Skip install for speed
-        useBun: false,
+        packageManager: undefined,
       });
 
       // Verify project was created
       const entries = await readdir(projectPath);
       expect(entries.length).toBeGreaterThan(0);
-      
+
       // Verify package.json exists
       const packageJsonPath = join(projectPath, "package.json");
       const packageJson = await readFile(packageJsonPath, "utf8");
@@ -42,18 +42,18 @@ describe("runCreateCommand", () => {
     it("should create project in current directory with '.'", async () => {
       const projectPath = join(TEST_DIR, "dot-project");
       await mkdir(projectPath, { recursive: true });
-      
+
       // Change to the directory and use "."
       const originalCwd = process.cwd();
       process.chdir(projectPath);
-      
+
       try {
         await runCreateCommand({
           projectName: ".",
           templateId: "next",
           addons: undefined,
           install: false,
-          useBun: false,
+          packageManager: undefined,
         });
 
         // Verify project was created
@@ -74,13 +74,13 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: "shadcn",
         install: false,
-        useBun: false,
+        packageManager: undefined,
       });
 
       // Verify project was created
       const entries = await readdir(projectPath);
       expect(entries.length).toBeGreaterThan(0);
-      
+
       // Verify skills-lock.json exists with shadcn skills
       const skillsLockPath = join(projectPath, "skills-lock.json");
       const skillsLock = JSON.parse(await readFile(skillsLockPath, "utf8"));
@@ -95,7 +95,7 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: "gsap-lenis",
         install: false,
-        useBun: false,
+        packageManager: undefined,
       });
 
       // Verify skills-lock.json exists with gsap skills
@@ -115,20 +115,20 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: "elysia,gsap-lenis",
         install: false,
-        useBun: false,
+        packageManager: undefined,
       });
 
       // Verify skills-lock.json contains skills from BOTH addons
       const skillsLockPath = join(projectPath, "skills-lock.json");
       const skillsLock = JSON.parse(await readFile(skillsLockPath, "utf8"));
-      
+
       expect(skillsLock.skills).toBeTruthy();
-      
+
       // Should have elysia skills
       const skillKeys = Object.keys(skillsLock.skills);
-      const hasElysiaSkills = skillKeys.some(k => k.toLowerCase().includes("elysia"));
-      const hasGsapSkills = skillKeys.some(k => k.toLowerCase().includes("gsap"));
-      
+      const hasElysiaSkills = skillKeys.some((k) => k.toLowerCase().includes("elysia"));
+      const hasGsapSkills = skillKeys.some((k) => k.toLowerCase().includes("gsap"));
+
       expect(hasElysiaSkills || hasGsapSkills).toBe(true);
       // Both addons should contribute to skills
       expect(skillKeys.length).toBeGreaterThan(1);
@@ -142,13 +142,13 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: "shadcn,elysia,gsap-lenis",
         install: false,
-        useBun: false,
+        packageManager: undefined,
       });
 
       // Verify skills-lock.json contains skills from all addons
       const skillsLockPath = join(projectPath, "skills-lock.json");
       const skillsLock = JSON.parse(await readFile(skillsLockPath, "utf8"));
-      
+
       expect(skillsLock.skills).toBeTruthy();
       expect(Object.keys(skillsLock.skills).length).toBeGreaterThan(3);
     });
@@ -164,7 +164,7 @@ describe("runCreateCommand", () => {
         templateId: "next",
         addons: undefined,
         install: false, // Don't actually install
-        useBun: true,
+        packageManager: "bun",
       });
 
       const entries = await readdir(projectPath);
@@ -180,8 +180,8 @@ describe("runCreateCommand", () => {
           templateId: "next",
           addons: undefined,
           install: false,
-          useBun: false,
-        })
+          packageManager: undefined,
+        }),
       ).rejects.toThrow("Project name is required");
     });
 
@@ -194,8 +194,8 @@ describe("runCreateCommand", () => {
           templateId: "nonexistent-template",
           addons: undefined,
           install: false,
-          useBun: false,
-        })
+          packageManager: undefined,
+        }),
       ).rejects.toThrow();
     });
 
@@ -210,8 +210,8 @@ describe("runCreateCommand", () => {
           templateId: "next",
           addons: undefined,
           install: false,
-          useBun: false,
-        })
+          packageManager: undefined,
+        }),
       ).rejects.toThrow("not empty");
     });
 
@@ -222,8 +222,8 @@ describe("runCreateCommand", () => {
           templateId: "next",
           addons: undefined,
           install: false,
-          useBun: false,
-        })
+          packageManager: undefined,
+        }),
       ).rejects.toThrow("reserved");
     });
 
@@ -234,8 +234,8 @@ describe("runCreateCommand", () => {
           templateId: "next",
           addons: undefined,
           install: false,
-          useBun: false,
-        })
+          packageManager: undefined,
+        }),
       ).rejects.toThrow("can only contain");
     });
   });

@@ -1,7 +1,32 @@
 {
-  "name": "@gyldlab/next",
-  "version": "0.1.1",
-  "description": "CLI for scaffolding organization-approved Next.js projects from templates.",
+  "name": "create-gyldlab-next",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Built on a foundation of SOVEREIGN ALCHEMY — transforming vision into production-ready Next.js applications through curated templates and add-ons.",
+  "author": "GYLDLAB",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyldlab/next-app.git"
+  },
+  "homepage": "https://github.com/gyldlab/next-app#readme",
+  "bugs": {
+    "url": "https://github.com/gyldlab/next-app/issues"
+  },
+  "keywords": [
+    "nextjs",
+    "next",
+    "cli",
+    "create",
+    "scaffold",
+    "template",
+    "starter",
+    "gyldlab",
+    "shadcn",
+    "elysia",
+    "gsap",
+    "lenis",
+    "bun"
+  ],
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
