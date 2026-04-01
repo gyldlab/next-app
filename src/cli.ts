@@ -50,7 +50,7 @@ const program = new Command();
 program
   .name("create-gyldlab-next")
   .description("Scaffold organization-approved Next.js projects from pre-built templates.")
-  .version("0.1.1");
+  .version("0.1.2");
 
 program
   .argument("[project-name]", "Name of the new project directory")
