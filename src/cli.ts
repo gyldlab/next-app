@@ -7,6 +7,10 @@ import { runListTemplatesCommand } from "./commands/list-templates.js";
 import { runInteractiveMode } from "./ui/interactive.js";
 import { killActiveProcesses, type PackageManager } from "./utils/package-manager.js";
 
+import packageJson from "../package.json" with { type: "json" };
+
+const packageVersion = packageJson.version;
+
 type CreateOptions = {
   readonly template?: string;
   readonly addons?: string;
@@ -50,7 +54,7 @@ const program = new Command();
 program
   .name("@gyldlab/next")
   .description("Scaffold organization-approved Next.js projects from pre-built templates.")
-  .version("0.1.2");
+  .version(packageVersion);
 
 program
   .argument("[project-name]", "Name of the new project directory")
