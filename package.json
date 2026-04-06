@@ -1,6 +1,6 @@
 {
-  "name": "@gyldlab/next",
-  "version": "0.2.0",
+  "name": "@gyldlab/create-next",
+  "version": "0.2.1",
   "license": "MIT",
   "description": "Built on a foundation of SOVEREIGN ALCHEMY — transforming vision into production-ready Next.js applications through curated templates and add-ons.",
   "author": {
@@ -34,7 +34,7 @@
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
-    "gyldlab-next": "dist/cli.js"
+    "create-next": "dist/cli.js"
   },
   "files": [
     "dist",

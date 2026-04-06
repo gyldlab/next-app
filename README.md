@@ -1,20 +1,21 @@
 <div align="center">
 
-# @gyldlab/next
+# @gyldlab/create-next
 
 ![GYLDLAB Banner](https://raw.githubusercontent.com/gyldlab/next-app/main/docs/banner.gif)
 
 **Built on a foundation of _SOVEREIGN ALCHEMY_**  
 _Transforming vision into production-ready Next.js applications through curated templates and add-ons._
 
-[![npm version](https://img.shields.io/npm/v/%40gyldlab%2Fnext.svg)](https://www.npmjs.com/package/@gyldlab/next)
+[![npm version](https://img.shields.io/npm/v/%40gyldlab%2Fcreate-next.svg)](https://www.npmjs.com/package/@gyldlab/create-next)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
 ## Package Information
 
-- **Package name**: `@gyldlab/next`
+- **Package name**: `@gyldlab/create-next`
+- **Create command**: `bun create @gyldlab/next`
 - **Repository**: [gyldlab/next-app](https://github.com/gyldlab/next-app)
 - **License**: MIT
 

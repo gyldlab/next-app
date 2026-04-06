@@ -1,6 +1,6 @@
 # Project Name
 
-Built on a foundation of _SOVEREIGN ALCHEMY_, this project utilizes [`@gyldlab/next`](https://github.com/gyldlab/next-app) to turn vision into high-performance digital reality.
+Built on a foundation of _SOVEREIGN ALCHEMY_, this project utilizes [`bun create @gyldlab/next`](https://github.com/gyldlab/next-app) to turn vision into high-performance digital reality.
 
 ## Getting Started
 
@@ -62,7 +62,7 @@ If you included add-ons during scaffolding, see their respective documentation:
 
 - [Next.js Documentation](https://nextjs.org/docs) — Features and API reference
 - [Learn Next.js](https://nextjs.org/learn) — Interactive tutorial
-- [@gyldlab/next CLI](https://github.com/gyldlab/next-app) — Template CLI documentation
+- [@gyldlab/create-next CLI](https://github.com/gyldlab/next-app) — Template CLI documentation
 
 ## Deploy
 
