@@ -10,6 +10,7 @@ import { runCreateCommand } from "../commands/create.js";
 import animationConfig, { type AnimationConfig } from "../config/animation.js";
 import { type InteractiveResult } from "./types.js";
 import { type PackageManager } from "../utils/package-manager.js";
+import { setInteractiveActive } from "../cli.js";
 import { AppLayout } from "./components/app-layout.js";
 import { TemplateSelector } from "./components/template-selector.js";
 import { AddonSelector } from "./components/addon-selector.js";
@@ -18,26 +19,56 @@ import { ListMode } from "./components/list-mode.js";
 
 // ── Hooks ───────────────────────────────────────────────────────────
 
-/** Drives the logo + text sweep animations via two offset counters. */
+/** Drives the logo + text sweep animations via two offset counters.
+ *  Both counters advance inside a single shared interval so React can
+ *  batch the setState calls into one render – preventing jitter from
+ *  two independent intervals firing close together. */
 function useLogoAnimation(config: AnimationConfig) {
   const [logoOffset, setLogoOffset] = useState(0);
   const [textOffset, setTextOffset] = useState(0);
 
   useEffect(() => {
-    if (!config.logo.enabled) return;
-    const interval = setInterval(() => {
-      setLogoOffset((prev) => (prev + 1) % config.logo.cycleLength);
-    }, config.logo.speedMs);
-    return () => clearInterval(interval);
-  }, [config.logo.enabled, config.logo.cycleLength, config.logo.speedMs]);
+    const logoEnabled = config.logo.enabled;
+    const textEnabled = config.text.enabled;
+    if (!logoEnabled && !textEnabled) return;
 
-  useEffect(() => {
-    if (!config.text.enabled) return;
-    const interval = setInterval(() => {
-      setTextOffset((prev) => (prev + 1) % config.text.cycleLength);
-    }, config.text.speedMs);
-    return () => clearInterval(interval);
-  }, [config.text.enabled, config.text.cycleLength, config.text.speedMs]);
+    // Run one interval at the GCD of both speeds so each animation
+    // still advances at its own rate, but within the same callback.
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const tickMs =
+      logoEnabled && textEnabled
+        ? gcd(config.logo.speedMs, config.text.speedMs)
+        : logoEnabled
+          ? config.logo.speedMs
+          : config.text.speedMs;
+
+    let logoAccum = 0;
+    let textAccum = 0;
+
+    const id = setInterval(() => {
+      logoAccum += tickMs;
+      textAccum += tickMs;
+
+      // Both setState calls inside one callback → React batches → one render
+      if (logoEnabled && logoAccum >= config.logo.speedMs) {
+        logoAccum = 0;
+        setLogoOffset((prev) => (prev + 1) % config.logo.cycleLength);
+      }
+      if (textEnabled && textAccum >= config.text.speedMs) {
+        textAccum = 0;
+        setTextOffset((prev) => (prev + 1) % config.text.cycleLength);
+      }
+    }, tickMs);
+
+    return () => clearInterval(id);
+  }, [
+    config.logo.enabled,
+    config.logo.speedMs,
+    config.logo.cycleLength,
+    config.text.enabled,
+    config.text.speedMs,
+    config.text.cycleLength,
+  ]);
 
   return { logoOffset, textOffset };
 }
@@ -257,7 +288,22 @@ export async function runInteractiveMode(
     ref.result = r;
   };
 
-  const { waitUntilExit } = render(
+  // ── Alternate screen buffer ──────────────────────────────────────
+  // Switch to the terminal's alternate screen buffer (like vim/htop).
+  // This isolates the UI from the scrollback buffer so scrolling cannot
+  // shift the viewport away from Ink's output — eliminating ghost artifacts.
+  // On exit, the primary buffer is restored and the user's prior output reappears.
+  const stdout = process.stdout;
+  const enterAltScreen = "\x1B[?1049h"; // smcup — switch to alternate buffer
+  const leaveAltScreen = "\x1B[?1049l"; // rmcup — restore primary buffer
+  const hideCursor = "\x1B[?25l";
+  const showCursor = "\x1B[?25h";
+
+  // Tell cli.ts to skip its global cleanup (process.exit) while we own the terminal
+  setInteractiveActive(true);
+  stdout.write(enterAltScreen + hideCursor);
+
+  const { waitUntilExit, unmount, cleanup } = render(
     <InteractiveApp
       projectName={projectName}
       mode={mode}
@@ -268,7 +314,26 @@ export async function runInteractiveMode(
     />,
   );
 
+  // Ensure clean teardown on unexpected signals: restore primary screen buffer,
+  // show cursor, etc. so the terminal is never left in a corrupted state.
+  const teardown = () => {
+    unmount();
+    cleanup();
+    stdout.write(showCursor + leaveAltScreen);
+    setInteractiveActive(false);
+  };
+  process.once("SIGINT", teardown);
+  process.once("SIGTERM", teardown);
+
   await waitUntilExit();
+
+  // Normal exit: restore terminal
+  stdout.write(showCursor + leaveAltScreen);
+  setInteractiveActive(false);
+
+  // Remove our listeners so they don't fire after Ink has already exited
+  process.removeListener("SIGINT", teardown);
+  process.removeListener("SIGTERM", teardown);
 
   // After Ink exits, run the create command if we have a result
   if (ref.result) {

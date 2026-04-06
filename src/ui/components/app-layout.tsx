@@ -19,7 +19,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => (
   <Box flexDirection="column">
     <AnimatedLogo logoOffset={logoOffset} textOffset={textOffset} config={config} />
-    <Text dimColor>create-gyldlab-next :: templates + addons + skills</Text>
+    <Text dimColor>@gyldlab/next :: templates + addons + skills</Text>
     {children}
   </Box>
 );

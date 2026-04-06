@@ -3,4 +3,9 @@ dist
 coverage
 *.tgz
 bun.lock
-templates/addons/gsap-lenis/files/.agents/skills
+
+templates/base/next/.prettierrc
+templates/base/next/.prettierignore
+templates/base/next/.gitignore
+templates/base/next/.husky
+templates/base/next/public
