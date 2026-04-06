@@ -35,9 +35,12 @@ function useLogoAnimation(config: AnimationConfig) {
     // Run one interval at the GCD of both speeds so each animation
     // still advances at its own rate, but within the same callback.
     const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-    const tickMs = logoEnabled && textEnabled
-      ? gcd(config.logo.speedMs, config.text.speedMs)
-      : logoEnabled ? config.logo.speedMs : config.text.speedMs;
+    const tickMs =
+      logoEnabled && textEnabled
+        ? gcd(config.logo.speedMs, config.text.speedMs)
+        : logoEnabled
+          ? config.logo.speedMs
+          : config.text.speedMs;
 
     let logoAccum = 0;
     let textAccum = 0;
@@ -59,8 +62,12 @@ function useLogoAnimation(config: AnimationConfig) {
 
     return () => clearInterval(id);
   }, [
-    config.logo.enabled, config.logo.speedMs, config.logo.cycleLength,
-    config.text.enabled, config.text.speedMs, config.text.cycleLength,
+    config.logo.enabled,
+    config.logo.speedMs,
+    config.logo.cycleLength,
+    config.text.enabled,
+    config.text.speedMs,
+    config.text.cycleLength,
   ]);
 
   return { logoOffset, textOffset };

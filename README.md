@@ -70,8 +70,8 @@ npm create @gyldlab/next@latest -- templates
 
 The CLI auto-detects the package manager based on how you invoke it:
 
-| Invocation                 | Auto-detected |
-| -------------------------- | ------------- |
+| Invocation                  | Auto-detected |
+| --------------------------- | ------------- |
 | `npm create @gyldlab/next`  | npm           |
 | `bun create @gyldlab/next`  | bun           |
 | `pnpm create @gyldlab/next` | pnpm          |
@@ -219,14 +219,14 @@ To publish this package to npm:
 
 2. Inspect the publish payload:
 
-  ```bash
-  npm pack --dry-run
-  ```
+```bash
+npm pack --dry-run
+```
 
 3. Login to npm:
 
    ```bash
-  npm login --scope=@gyldlab --access public
+   npm login --scope=@gyldlab --access public
    ```
 
 4. Publish (local/manual flow):
@@ -237,14 +237,14 @@ To publish this package to npm:
 
 5. Publish from CI with provenance (recommended):
 
-  ```bash
-  npm publish --access public --provenance
-  ```
+```bash
+npm publish --access public --provenance
+```
 
 6. Publish updates:
    ```bash
    # Update version in package.json first
-  npm publish --access public
+   npm publish --access public
    ```
 
 > **Security hardening**: Enable npm 2FA with write protection on your maintainer account.

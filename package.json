@@ -55,10 +55,16 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "prettier --check .",
     "format": "prettier --write .",
+    "prepare": "husky",
     "test": "bun test",
     "smoke:gsap-lenis": "bun ./scripts/smoke-gsap-lenis.ts",
     "smoke:shadcn": "bun ./scripts/smoke-shadcn.ts",
     "smoke:elysia": "bun ./scripts/smoke-elysia.ts"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,md,css,scss,yml,yaml}": [
+      "prettier --write --ignore-unknown"
+    ]
   },
   "dependencies": {
     "commander": "^12.1.0",
@@ -72,7 +78,10 @@
     "@types/prompts": "^2.4.9",
     "@types/react": "^19.2.14",
     "asciify-image": "^0.1.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "sharp": "^0.34.5",
     "svg2img": "^1.0.0-beta.2",
     "tsx": "^4.20.6",

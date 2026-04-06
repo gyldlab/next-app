@@ -1,6 +1,6 @@
 # Project Name
 
-Built on a foundation of *SOVEREIGN ALCHEMY*, this project utilizes [`@gyldlab/next`](https://github.com/gyldlab/next-app) to turn vision into high-performance digital reality.
+Built on a foundation of _SOVEREIGN ALCHEMY_, this project utilizes [`@gyldlab/next`](https://github.com/gyldlab/next-app) to turn vision into high-performance digital reality.
 
 ## Getting Started
 
@@ -45,16 +45,16 @@ If you included add-ons during scaffolding, see their respective documentation:
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix ESLint issues |
-| `npm run format` | Format code with Prettier |
-| `npm run format:check` | Check formatting |
-| `npm run check` | Run lint + build |
+| Command                | Description               |
+| ---------------------- | ------------------------- |
+| `npm run dev`          | Start development server  |
+| `npm run build`        | Build for production      |
+| `npm run start`        | Start production server   |
+| `npm run lint`         | Run ESLint                |
+| `npm run lint:fix`     | Auto-fix ESLint issues    |
+| `npm run format`       | Format code with Prettier |
+| `npm run format:check` | Check formatting          |
+| `npm run check`        | Run lint + build          |
 
 > **Tip:** If your project was created with `--bun`, replace `npm` with `bun` in the commands above.
 
