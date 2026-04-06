@@ -50,7 +50,9 @@ export const AddonSelector: React.FC<AddonSelectorProps> = ({
               )}
               <Text dimColor> ({addon.id})</Text>
             </Text>
-            {isFocused && addon.description && <Text dimColor> {addon.description}</Text>}
+            {/* Always render description line (even if empty) so total height
+                stays constant while navigating — prevents Ink cursor-up miscounts */}
+            <Text dimColor>{isFocused && addon.description ? ` ${addon.description}` : " "}</Text>
           </Box>
         );
       })}

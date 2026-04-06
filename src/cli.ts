@@ -48,7 +48,7 @@ const EXIT_CANCELLED = 130; // Script terminated by Ctrl+C
 const program = new Command();
 
 program
-  .name("create-gyldlab-next")
+  .name("@gyldlab/next")
   .description("Scaffold organization-approved Next.js projects from pre-built templates.")
   .version("0.1.2");
 
@@ -121,19 +121,19 @@ program.addHelpText(
   "after",
   `
 Examples:
-  create-gyldlab-next                                   Interactive mode with logo
-  create-gyldlab-next my-app                            Interactive template/addon selection
-  create-gyldlab-next my-app --template next            Skip prompts, use specified template
-  create-gyldlab-next my-app -b                         Use bun as package manager
-  create-gyldlab-next my-app -p                         Use pnpm as package manager
-  create-gyldlab-next my-app -y                         Use yarn as package manager
-  create-gyldlab-next my-app --addons gsap-lenis        Include specific addons
-  create-gyldlab-next my-app --no-install               Skip dependency installation
-  create-gyldlab-next my-app --debug                    Show detailed error traces
-  create-gyldlab-next templates                         List available templates
+  bun create @gyldlab/next                              Interactive mode with logo
+  bun create @gyldlab/next my-app                       Interactive template/addon selection
+  bun create @gyldlab/next my-app --template next       Skip prompts, use specified template
+  bun create @gyldlab/next my-app -b                    Use bun as package manager
+  bun create @gyldlab/next my-app -p                    Use pnpm as package manager
+  bun create @gyldlab/next my-app -y                    Use yarn as package manager
+  bun create @gyldlab/next my-app --addons gsap-lenis   Include specific addons
+  bun create @gyldlab/next my-app --no-install          Skip dependency installation
+  bun create @gyldlab/next my-app --debug               Show detailed error traces
+  bun create @gyldlab/next templates                    List available templates
 
 Package Manager:
-  Auto-detected from how you run the CLI (npx → npm, bunx → bun, pnpx → pnpm, yarn dlx → yarn).
+  Auto-detected from invocation (npm create → npm, bun create → bun, pnpm create → pnpm, yarn create → yarn).
   Use -b, -p, or -y flags to override auto-detection.
 `,
 );
@@ -146,8 +146,21 @@ function cleanup(): void {
   process.exit(EXIT_CANCELLED);
 }
 
-process.on("SIGINT", cleanup);
-process.on("SIGTERM", cleanup);
+// Only register global SIGINT/SIGTERM when NOT in interactive mode.
+// During interactive mode, the Ink renderer owns signal handling to
+// properly restore the alternate screen buffer before exiting.
+let interactiveActive = false;
+
+export function setInteractiveActive(active: boolean): void {
+  interactiveActive = active;
+}
+
+process.on("SIGINT", () => {
+  if (!interactiveActive) cleanup();
+});
+process.on("SIGTERM", () => {
+  if (!interactiveActive) cleanup();
+});
 
 async function main(): Promise<void> {
   try {
