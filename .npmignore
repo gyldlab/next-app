@@ -1,0 +1,8 @@
+# Extra publish safety-net on top of package.json "files"
+# Prevent accidental payload growth from editor/auxiliary assets.
+
+docs/banner.png
+docs/banner.gif
+**/.DS_Store
+**/*.log
+**/.vscode/**

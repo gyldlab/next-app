@@ -1,9 +1,13 @@
 {
-  "name": "create-gyldlab-next",
+  "name": "@gyldlab/next",
   "version": "0.1.2",
   "license": "MIT",
   "description": "Built on a foundation of SOVEREIGN ALCHEMY — transforming vision into production-ready Next.js applications through curated templates and add-ons.",
-  "author": "GYLDLAB",
+  "author": {
+    "name": "GYLDLAB",
+    "email": "dev@gyldlab.com",
+    "url": "https://gyldlab.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gyldlab/next-app.git"
@@ -30,16 +34,20 @@
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
-    "create-gyldlab-next": "dist/cli.js"
+    "gyldlab-next": "dist/cli.js"
   },
   "files": [
     "dist",
     "templates",
-    "docs",
+    "docs/ANIMATION_GUIDE.md",
     "README.md"
   ],
   "engines": {
     "node": ">=18.18.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -53,10 +61,7 @@
     "smoke:elysia": "bun ./scripts/smoke-elysia.ts"
   },
   "dependencies": {
-    "@inkjs/ui": "^2.0.0",
-    "chalk-animation": "^2.0.3",
     "commander": "^12.1.0",
-    "figlet": "^1.11.0",
     "ink": "^6.8.0",
     "picocolors": "^1.1.1",
     "prompts": "^2.4.2",
@@ -64,7 +69,6 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.11",
-    "@types/chalk-animation": "^1.6.3",
     "@types/prompts": "^2.4.9",
     "@types/react": "^19.2.14",
     "asciify-image": "^0.1.10",

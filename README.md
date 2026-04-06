@@ -1,20 +1,20 @@
 <div align="center">
 
-# create-gyldlab-next
+# @gyldlab/next
 
-![GYLDLAB Banner](https://raw.githubusercontent.com/gyldlab/next-app/main/docs/banner.png)
+![GYLDLAB Banner](https://raw.githubusercontent.com/gyldlab/next-app/main/docs/banner.gif)
 
 **Built on a foundation of _SOVEREIGN ALCHEMY_**  
 _Transforming vision into production-ready Next.js applications through curated templates and add-ons._
 
-[![npm version](https://img.shields.io/npm/v/create-gyldlab-next.svg)](https://www.npmjs.com/package/create-gyldlab-next)
+[![npm version](https://img.shields.io/npm/v/%40gyldlab%2Fnext.svg)](https://www.npmjs.com/package/@gyldlab/next)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
 ## Package Information
 
-- **Package name**: `create-gyldlab-next`
+- **Package name**: `@gyldlab/next`
 - **Repository**: [gyldlab/next-app](https://github.com/gyldlab/next-app)
 - **License**: MIT
 
@@ -22,19 +22,19 @@ _Transforming vision into production-ready Next.js applications through curated 
 
 ```bash
 # Using npm create (like create-next-app)
-npm create gyldlab-next my-app
+npm create @gyldlab/next@latest my-app
 
 # Using bun create
-bun create gyldlab-next my-app
+bun create @gyldlab/next my-app
 
 # Using pnpm create
-pnpm create gyldlab-next my-app
+pnpm create @gyldlab/next my-app
 
 # Using yarn create
-yarn create gyldlab-next my-app
+yarn create @gyldlab/next my-app
 
 # Create in current directory
-npm create gyldlab-next .
+npm create @gyldlab/next@latest .
 
 ```
 
@@ -44,24 +44,24 @@ The package manager is auto-detected from how you invoke the CLI.
 
 ```bash
 # Skip prompts with template flag
-npm create gyldlab-next my-app -- --template next
+npm create @gyldlab/next@latest my-app -- --template next
 
 # Include specific add-ons
-npm create gyldlab-next my-app -- --addons gsap-lenis,shadcn
+npm create @gyldlab/next@latest my-app -- --addons gsap-lenis,shadcn
 
 # Package manager flags (override auto-detection)
-npm create gyldlab-next my-app -- -b       # Use bun
-npm create gyldlab-next my-app -- -p       # Use pnpm
-npm create gyldlab-next my-app -- -y       # Use yarn
+npm create @gyldlab/next@latest my-app -- -b       # Use bun
+npm create @gyldlab/next@latest my-app -- -p       # Use pnpm
+npm create @gyldlab/next@latest my-app -- -y       # Use yarn
 
 # Skip dependency installation
-npm create gyldlab-next my-app -- --no-install
+npm create @gyldlab/next@latest my-app -- --no-install
 
 # Show detailed error traces
-npm create gyldlab-next my-app -- --debug
+npm create @gyldlab/next@latest my-app -- --debug
 
 # List available templates
-npm create gyldlab-next -- templates
+npm create @gyldlab/next@latest -- templates
 ```
 
 > **Note**: When using `npm create` with flags, use `--` before the flags to pass them to the CLI.
@@ -72,10 +72,10 @@ The CLI auto-detects the package manager based on how you invoke it:
 
 | Invocation                 | Auto-detected |
 | -------------------------- | ------------- |
-| `npm create gyldlab-next`  | npm           |
-| `bun create gyldlab-next`  | bun           |
-| `pnpm create gyldlab-next` | pnpm          |
-| `yarn create gyldlab-next` | yarn          |
+| `npm create @gyldlab/next`  | npm           |
+| `bun create @gyldlab/next`  | bun           |
+| `pnpm create @gyldlab/next` | pnpm          |
+| `yarn create @gyldlab/next` | yarn          |
 
 Use flags to override auto-detection: `-b` (bun), `-p` (pnpm), `-y` (yarn).
 
@@ -203,8 +203,8 @@ Then test from any directory:
 
 ```bash
 cd /tmp
-create-gyldlab-next test-project
-create-gyldlab-next test-project --template next --addons elysia,gsap-lenis -b
+bun create @gyldlab/next test-project
+bun create @gyldlab/next test-project --template next --addons elysia,gsap-lenis -b
 ```
 
 ## Publishing to npm
@@ -217,32 +217,50 @@ To publish this package to npm:
    bun run build
    ```
 
-2. Login to npm:
+2. Inspect the publish payload:
+
+  ```bash
+  npm pack --dry-run
+  ```
+
+3. Login to npm:
 
    ```bash
-   npm login
+  npm login --scope=@gyldlab --access public
    ```
 
-3. Publish (first time):
+4. Publish (local/manual flow):
 
    ```bash
    npm publish --access public
    ```
 
-4. Publish updates:
+5. Publish from CI with provenance (recommended):
+
+  ```bash
+  npm publish --access public --provenance
+  ```
+
+6. Publish updates:
    ```bash
    # Update version in package.json first
-   npm publish
+  npm publish --access public
    ```
+
+> **Security hardening**: Enable npm 2FA with write protection on your maintainer account.
+>
+> ```bash
+> npm profile enable-2fa auth-and-writes
+> ```
 
 Users will then be able to run:
 
 ```bash
-npm create gyldlab-next my-app
+npm create @gyldlab/next@latest my-app
 # Or with other package managers
-bun create gyldlab-next my-app
-pnpm create gyldlab-next my-app
-yarn create gyldlab-next my-app
+bun create @gyldlab/next my-app
+pnpm create @gyldlab/next my-app
+yarn create @gyldlab/next my-app
 ```
 
 ## Add your own templates
