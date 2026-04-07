@@ -70,6 +70,7 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
     for (const addon of selectedAddons) {
       await applyAddon(targetDirectory, addon);
     }
+    await syncClaudeSkillsSymlinks(targetDirectory);
   }
 
   await renameIfExists(join(targetDirectory, "gitignore"), join(targetDirectory, ".gitignore"));
@@ -496,6 +497,35 @@ function isNodeErrorWithCode(error: unknown, code: string): boolean {
     "code" in error &&
     (error as { readonly code?: string }).code === code
   );
+}
+
+async function syncClaudeSkillsSymlinks(targetDirectory: string): Promise<void> {
+  const agentsSkillsDir = join(targetDirectory, ".agents", "skills");
+  const claudeSkillsDir = join(targetDirectory, ".claude", "skills");
+
+  let entries: import("node:fs").Dirent<string>[];
+  try {
+    entries = await readdir(agentsSkillsDir, { withFileTypes: true, encoding: "utf8" });
+  } catch (error) {
+    if (isNodeErrorWithCode(error, "ENOENT")) {
+      return;
+    }
+    throw error;
+  }
+
+  const skillDirs = entries.filter((e) => e.isDirectory());
+  if (skillDirs.length === 0) {
+    return;
+  }
+
+  await mkdir(claudeSkillsDir, { recursive: true });
+
+  for (const skill of skillDirs) {
+    const symlinkPath = join(claudeSkillsDir, skill.name);
+    const symlinkTarget = join("..", "..", ".agents", "skills", skill.name);
+    await removeExistingPath(symlinkPath);
+    await symlink(symlinkTarget, symlinkPath);
+  }
 }
 
 type TemplateSymlink = {
