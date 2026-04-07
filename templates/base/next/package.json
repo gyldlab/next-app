@@ -14,20 +14,20 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "next": "16.2.1",
+    "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@eslint/compat": "2.0.3",
+    "@eslint/compat": "2.0.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "10.1.0",
-    "eslint-config-next": "16.2.1",
-    "eslint-plugin-simple-import-sort": "12.1.1",
+    "eslint": "10.2.0",
+    "eslint-config-next": "16.2.2",
+    "eslint-plugin-simple-import-sort": "13.0.0",
     "eslint-plugin-unused-imports": "4.4.1",
     "husky": "9.1.7",
     "lint-staged": "16.4.0",
