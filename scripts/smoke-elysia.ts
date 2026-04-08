@@ -1,9 +1,9 @@
 import {
   buildCli,
   commandSucceeds,
-  getExpectedBundledSkills,
+  createMockPackageExecutors,
   runCommand,
-  verifyGeneratedSkills,
+  verifyPackageExecutorCommands,
 } from "./smoke-utils.js";
 
 const repositoryRoot = `${import.meta.dir}/..`;
@@ -13,13 +13,15 @@ const generatedProjectDirectory = `${temporaryRoot}/smoke-app`;
 await runSmokeTest();
 
 async function runSmokeTest(): Promise<void> {
-  const requiredSkills = await getExpectedBundledSkills(
-    `${repositoryRoot}/templates/addons/elysia/addon.json`,
-  );
+  const expectedCommands = [
+    "bunx skills add vercel-labs/agent-skills --skill vercel-composition-patterns vercel-react-best-practices vercel-react-view-transitions web-design-guidelines -a amp -a claude-code -y",
+    "bunx skills add elysiajs/skills -a amp -a claude-code -y",
+  ];
   buildCli(repositoryRoot);
 
   await Bun.$`rm -rf ${temporaryRoot}`;
   await Bun.$`mkdir -p ${temporaryRoot}`;
+  const mockExecutors = await createMockPackageExecutors(temporaryRoot);
 
   runCommand(
     "bun",
@@ -30,17 +32,19 @@ async function runSmokeTest(): Promise<void> {
       "next",
       "--addons",
       "elysia",
+      "--bun",
       "--no-install",
     ],
     {
       cwd: temporaryRoot,
+      env: mockExecutors.env,
     },
   );
 
-  await verifyGeneratedSkills(requiredSkills, generatedProjectDirectory, repositoryRoot);
+  await verifyPackageExecutorCommands(expectedCommands, mockExecutors.logPath);
   await verifyElysiaFiles();
   console.log(
-    "Smoke test passed: scaffolded project has expected Elysia MVC structure and skill wiring.",
+    "Smoke test passed: scaffolded project has expected Elysia MVC structure and skill install commands.",
   );
 }
 
