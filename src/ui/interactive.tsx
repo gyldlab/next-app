@@ -233,7 +233,7 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
 
   if (phase === "enteringName") {
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config} childrenLines={6}>
         <NameInput value={inputProjectName} />
       </AppLayout>
     );
@@ -241,7 +241,7 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
 
   if (phase === "creating") {
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config} childrenLines={2}>
         <Text> </Text>
         <Text color="green">Creating project with template: {selectedTemplate?.id}...</Text>
       </AppLayout>
@@ -249,8 +249,15 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   }
 
   if (phase === "selectingAddons" && selectedTemplate) {
+    // 8 chrome lines + 2 per addon (name + description placeholder)
+    const addonLines = 8 + addons.length * 2;
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+      <AppLayout
+        logoOffset={logoOffset}
+        textOffset={textOffset}
+        config={config}
+        childrenLines={addonLines}
+      >
         <AddonSelector
           selectedTemplate={selectedTemplate}
           addons={addons}
@@ -262,8 +269,15 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   }
 
   // Default: template selection
+  // 4 chrome lines (heading, margins, footer) + 1 per template
+  const templateLines = 4 + templates.length + 2;
   return (
-    <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+    <AppLayout
+      logoOffset={logoOffset}
+      textOffset={textOffset}
+      config={config}
+      childrenLines={templateLines}
+    >
       <TemplateSelector templates={templates} selectedIndex={selectedIndex} />
       <Text> </Text>
       <Text dimColor>Press 'q' or Escape to exit</Text>

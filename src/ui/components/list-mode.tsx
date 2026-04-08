@@ -27,8 +27,16 @@ export const ListMode: React.FC<ListModeProps> = ({
     }
   });
 
+  // Each template = 3 lines, each addon = 3 lines, plus headings/spacing
+  const listLines = 3 + templates.length * 3 + 2 + addons.length * 3 + 2;
+
   return (
-    <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+    <AppLayout
+      logoOffset={logoOffset}
+      textOffset={textOffset}
+      config={config}
+      childrenLines={listLines}
+    >
       <Text> </Text>
       <Text bold color="cyan">
         Base templates:

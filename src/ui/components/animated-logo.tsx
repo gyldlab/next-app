@@ -44,55 +44,78 @@ export interface AnimatedLogoProps {
   logoOffset: number;
   textOffset: number;
   config: AnimationConfig;
+  /**
+   * Maximum number of logo (G graphic) rows to display.
+   * When the terminal is too short, rows are trimmed from the TOP
+   * (the top rows are uniform filled blocks — the distinctive shape
+   * is in the bottom rows). The "gyldlab" text part is never trimmed.
+   * Pass 0 to hide the G graphic entirely. Defaults to all 16 rows.
+   */
+  maxLogoRows?: number;
 }
 
-export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ logoOffset, textOffset, config }) => {
+export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
+  logoOffset,
+  textOffset,
+  config,
+  maxLogoRows,
+}) => {
+  // Determine which logo rows to show. Trim from the top when constrained.
+  const logoRows =
+    maxLogoRows !== undefined
+      ? GYLDLAB_LOGO_PART.slice(-Math.max(0, Math.min(maxLogoRows, GYLDLAB_LOGO_PART.length)))
+      : GYLDLAB_LOGO_PART;
+  // When the G graphic is fully hidden, skip top/bottom padding too
+  const showLogoPart = logoRows.length > 0;
+
   return (
     <Box flexDirection="column">
-      {/* Top spacing */}
-      <Text> </Text>
-      <Text> </Text>
+      {/* Top spacing — only when logo graphic is visible */}
+      {showLogoPart && <Text> </Text>}
 
-      {/* Logo part - controlled by animation config */}
-      {GYLDLAB_LOGO_PART.map((line, rowIndex) => {
-        const chars = line.split("");
-        return (
-          <Text key={`logo-${rowIndex}`}>
-            {chars.map((char, colIndex) => {
-              if (!config.logo.enabled) {
-                // Static white logo
+      {/* Logo part - controlled by animation config, trimmed to fit viewport */}
+      {showLogoPart &&
+        logoRows.map((line, visibleIndex) => {
+          // Map back to original row index for correct animation diagonal
+          const rowIndex = GYLDLAB_LOGO_PART.length - logoRows.length + visibleIndex;
+          const chars = line.split("");
+          return (
+            <Text key={`logo-${rowIndex}`}>
+              {chars.map((char, colIndex) => {
+                if (!config.logo.enabled) {
+                  // Static white logo
+                  return (
+                    <Text key={colIndex} color={config.logo.defaultColor}>
+                      {char}
+                    </Text>
+                  );
+                }
+
+                // Animated logo with sweep line
+                const diagonalIndex = calculateDiagonalIndex(
+                  rowIndex,
+                  colIndex,
+                  config.logo.direction,
+                  config.logo.bandWidth,
+                );
+
+                const highlighted = isHighlighted(
+                  diagonalIndex,
+                  logoOffset,
+                  config.logo.sweepThickness,
+                );
+
+                const color = highlighted ? config.logo.highlightColor : config.logo.defaultColor;
+
                 return (
-                  <Text key={colIndex} color={config.logo.defaultColor}>
+                  <Text key={colIndex} color={color}>
                     {char}
                   </Text>
                 );
-              }
-
-              // Animated logo with sweep line
-              const diagonalIndex = calculateDiagonalIndex(
-                rowIndex,
-                colIndex,
-                config.logo.direction,
-                config.logo.bandWidth,
-              );
-
-              const highlighted = isHighlighted(
-                diagonalIndex,
-                logoOffset,
-                config.logo.sweepThickness,
-              );
-
-              const color = highlighted ? config.logo.highlightColor : config.logo.defaultColor;
-
-              return (
-                <Text key={colIndex} color={color}>
-                  {char}
-                </Text>
-              );
-            })}
-          </Text>
-        );
-      })}
+              })}
+            </Text>
+          );
+        })}
 
       {/* Text part - rainbow animation controlled by config */}
       {GYLDLAB_TEXT_PART.map((line, rowIndex) => {
@@ -144,7 +167,6 @@ export const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ logoOffset, textOffs
       })}
 
       {/* Bottom spacing */}
-      <Text> </Text>
       <Text> </Text>
     </Box>
   );
