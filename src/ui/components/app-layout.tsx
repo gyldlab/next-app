@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Text, useStdout } from "ink";
 import { AnimatedLogo } from "./animated-logo.js";
 import { type AnimationConfig } from "../../config/animation.js";
+import { computeBrandLayout, countBrandLines, VIEWPORT_SAFETY_ROWS } from "../layout.js";
 
 // Common layout wrapper: animated logo + tagline + children
 export interface AppLayoutProps {
-  logoOffset: number;
-  textOffset: number;
   config: AnimationConfig;
-  children: React.ReactNode;
+  children: React.ReactNode | ((bodyLines: number) => React.ReactNode);
   /**
    * How many lines the children section will consume.
    * Used to compute how many logo rows can be shown without
@@ -17,21 +16,7 @@ export interface AppLayoutProps {
   childrenLines?: number;
 }
 
-// Fixed line counts that never change:
-// "gyldlab" ASCII text = 10 lines,  tagline = 1 line,  bottom pad = 1 line
-const FIXED_LINES = 10 + 1 + 1;
-// Top pad (1 line when logo graphic is visible)
-const LOGO_PAD = 1;
-// Total logo G rows available
-const MAX_G_ROWS = 16;
-
-export const AppLayout: React.FC<AppLayoutProps> = ({
-  logoOffset,
-  textOffset,
-  config,
-  children,
-  childrenLines = 8,
-}) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ config, children, childrenLines = 8 }) => {
   const { stdout } = useStdout();
   const [rows, setRows] = useState(() => stdout?.rows ?? 24);
 
@@ -43,22 +28,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     };
   }, [stdout]);
 
-  // Budget: rows = LOGO_PAD + maxLogoRows + FIXED_LINES + childrenLines
-  // → maxLogoRows = rows - FIXED_LINES - childrenLines - LOGO_PAD
-  const availableForLogo = rows - FIXED_LINES - childrenLines - LOGO_PAD;
-  // Clamp between 0..16.  When ≤ 0 the G graphic is hidden entirely.
-  const maxLogoRows = Math.max(0, Math.min(MAX_G_ROWS, availableForLogo));
+  const brandLayout = computeBrandLayout(rows, childrenLines);
+  const bodyLines = Math.max(1, rows - countBrandLines(brandLayout) - VIEWPORT_SAFETY_ROWS);
+  const content = typeof children === "function" ? children(bodyLines) : children;
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" height={Math.max(1, rows - VIEWPORT_SAFETY_ROWS)} overflow="hidden">
       <AnimatedLogo
-        logoOffset={logoOffset}
-        textOffset={textOffset}
         config={config}
-        maxLogoRows={maxLogoRows}
+        maxLogoRows={brandLayout.logoRows}
+        maxTextRows={brandLayout.textRows}
+        showTopPadding={brandLayout.showTopPadding}
+        showBottomPadding={brandLayout.showBottomPadding}
       />
-      <Text dimColor>@gyldlab/next :: templates + addons + skills</Text>
-      {children}
+      {brandLayout.showTagline && (
+        <Text dimColor wrap="truncate-end">
+          @gyldlab/next :: templates + addons + skills
+        </Text>
+      )}
+      {content}
     </Box>
   );
 };
