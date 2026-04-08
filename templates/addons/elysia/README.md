@@ -96,7 +96,9 @@ const { data } = await api.auth["sign-in"].post({
 
 ## Skills
 
-The bundled `elysiajs` skill provides:
+Generated projects install the `elysiajs/skills` package through the scaffold command, using the active package manager executor (`bunx`, `npx`, `pnpm dlx`, or `yarn dlx`).
+
+The installed `elysiajs` skill provides:
 
 - MVC pattern guidance
 - TypeBox validation
