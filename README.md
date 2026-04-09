@@ -111,10 +111,44 @@ You can proceed with just the base template (no add-ons) by pressing Enter witho
 ## Available Add-ons
 
 - **shadcn** - shadcn/ui component library with Tailwind CSS
-- **elysia** - Elysia MVC backend integration with Next.js App Router
+- **elysia** - Elysia MVC backend integration with Next.js App Router, Drizzle-ready schema, and Bun-native backend operations scripts powered by Effect
 - **gsap-lenis** - GSAP animations + Lenis smooth scrolling
 
 Each add-on includes pre-configured AI coding skills for enhanced development assistance.
+
+## Elysia Backend Ops
+
+Selecting the `elysia` add-on now scaffolds a backend operations toolkit alongside the MVC route/module structure:
+
+- `drizzle.config.ts` and `src/lib/db/schema.ts` for PostgreSQL schema management
+- `.env.example` for `DATABASE_URL` and `AUTH_ADMIN_*` bootstrap values
+- `scripts/` with a flat `runtime.ts` helper plus auth and database commands
+
+The generated `package.json` includes these commands:
+
+- `bun run auth:hash`
+- `bun run auth:register-admin`
+- `bun run auth:remove-admin`
+- `bun run db:connect`
+- `bun run db:status`
+- `bun run db:verify`
+- `bun run db:seed`
+- `bun run db:reset`
+- `bun run db:export`
+- `bun run db:generate`
+- `bun run db:migrate`
+- `bun run db:push`
+- `bun run db:studio`
+
+Recommended generated-project flow:
+
+1. Copy `.env.example` to `.env.local` and set `DATABASE_URL`.
+2. Run `bun run db:push` or `bun run db:generate && bun run db:migrate`.
+3. Run `bun run db:seed`.
+
+These generated scripts rely on Bun-native APIs for hashing, shell execution, and terminal IO, and use Effect for config validation plus database resource management.
+
+Agents should keep `scripts/db-seed.ts` updated whenever schema/bootstrap requirements change.
 
 ## Why this setup
 
@@ -284,12 +318,16 @@ Add-ons live under `templates/addons/` with an `addon.json` manifest file:
   "id": "your-addon",
   "name": "Your Add-on Name",
   "description": "What this add-on provides.",
+  "scripts": {
+    "db:seed": "bun scripts/db-seed.ts"
+  },
   "dependencies": {
     "some-package": "^1.0.0"
   },
-  "skills": {
-    "bundled": ["skill-id-1", "skill-id-2"]
-  }
+  "devDependencies": {
+    "some-dev-package": "^1.0.0"
+  },
+  "files": "Copied from templates/addons/your-addon/files/"
 }
 ```
 

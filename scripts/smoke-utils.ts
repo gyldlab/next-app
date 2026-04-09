@@ -3,15 +3,20 @@ export type RunCommandOptions = {
   readonly env?: Record<string, string | undefined>;
 };
 
+function getSpawnOptions(options: RunCommandOptions) {
+  return {
+    cwd: options.cwd,
+    ...(options.env ? { env: options.env } : {}),
+  };
+}
+
 export function runCommand(
   command: string,
   args: readonly string[],
   options: RunCommandOptions,
 ): void {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
-    env: options.env,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
@@ -27,10 +32,8 @@ export function runCommandOutput(
   args: readonly string[],
   options: RunCommandOptions,
 ): string {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
-    env: options.env,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -48,10 +51,8 @@ export function commandSucceeds(
   args: readonly string[],
   options: RunCommandOptions,
 ): boolean {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
-    env: options.env,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdout: "ignore",
     stderr: "ignore",
   });

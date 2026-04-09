@@ -463,35 +463,43 @@ async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<vo
     }
   }
 
-  await mergeAddonDependencies(targetDirectory, addon);
+  await mergeAddonPackageJson(targetDirectory, addon);
 }
 
-async function mergeAddonDependencies(targetDirectory: string, addon: AddonInfo): Promise<void> {
+type ScaffoldPackageJson = {
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
+};
+
+type ScaffoldPackageJsonSection = "scripts" | "dependencies" | "devDependencies";
+
+function mergePackageJsonSection(
+  packageJson: ScaffoldPackageJson,
+  section: ScaffoldPackageJsonSection,
+  additions: Readonly<Record<string, string>> | undefined,
+): void {
+  if (!additions || Object.keys(additions).length === 0) {
+    return;
+  }
+
+  packageJson[section] = {
+    ...(packageJson[section] ?? {}),
+    ...additions,
+  };
+}
+
+async function mergeAddonPackageJson(targetDirectory: string, addon: AddonInfo): Promise<void> {
   const packageJsonPath = join(targetDirectory, "package.json");
 
   try {
     const rawPackageJson = await readFile(packageJsonPath, "utf8");
-    const packageJson = JSON.parse(rawPackageJson) as {
-      dependencies?: Record<string, string>;
-      devDependencies?: Record<string, string>;
-      [key: string]: unknown;
-    };
+    const packageJson = JSON.parse(rawPackageJson) as ScaffoldPackageJson;
 
-    const addonDependencies = addon.dependencies ?? {};
-    if (Object.keys(addonDependencies).length > 0) {
-      packageJson.dependencies = {
-        ...(packageJson.dependencies ?? {}),
-        ...addonDependencies,
-      };
-    }
-
-    const addonDevDependencies = addon.devDependencies ?? {};
-    if (Object.keys(addonDevDependencies).length > 0) {
-      packageJson.devDependencies = {
-        ...(packageJson.devDependencies ?? {}),
-        ...addonDevDependencies,
-      };
-    }
+    mergePackageJsonSection(packageJson, "scripts", addon.scripts);
+    mergePackageJsonSection(packageJson, "dependencies", addon.dependencies);
+    mergePackageJsonSection(packageJson, "devDependencies", addon.devDependencies);
 
     await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
   } catch (error) {
