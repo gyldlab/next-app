@@ -1,6 +1,6 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import type { PackageManager } from "../types/package-manager.js";
 
-export type PackageManager = "bun" | "npm" | "pnpm" | "yarn";
+export type { PackageManager };
 
 export type PackageExecutor = {
   readonly command: string;
@@ -11,7 +11,7 @@ export type PackageExecutor = {
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 
 // Track active child processes for cleanup
-const activeProcesses = new Set<ChildProcess>();
+const activeProcesses = new Set<ReturnType<typeof Bun.spawn>>();
 
 /**
  * Detect the package manager based on how the CLI was invoked.
@@ -107,24 +107,30 @@ export function killActiveProcesses(): void {
 
 function runCommand(command: string, args: string[], cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
+    let timedOut = false;
+    let child: ReturnType<typeof Bun.spawn>;
+
+    try {
+      child = Bun.spawn([command, ...args], {
+        cwd,
+        env: process.env,
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Unknown spawn error";
+      reject(new Error(`Failed to run "${command}": ${reason}`));
+      return;
+    }
 
     activeProcesses.add(child);
 
     // Timeout handler
     const timeout = setTimeout(() => {
       if (!child.killed) {
+        timedOut = true;
         child.kill("SIGTERM");
-        activeProcesses.delete(child);
-        reject(
-          new Error(
-            `Command "${command} ${args.join(" ")}" timed out after ${INSTALL_TIMEOUT_MS / 1000}s.`,
-          ),
-        );
       }
     }, INSTALL_TIMEOUT_MS);
 
@@ -133,20 +139,31 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       activeProcesses.delete(child);
     };
 
-    child.once("error", (error) => {
-      cleanup();
-      reject(new Error(`Failed to run "${command}": ${error.message}`));
-    });
+    child.exited
+      .then((code) => {
+        cleanup();
 
-    child.once("exit", (code) => {
-      cleanup();
-      if (code === 0) {
-        resolve();
-        return;
-      }
+        if (timedOut) {
+          reject(
+            new Error(
+              `Command "${command} ${args.join(" ")}" timed out after ${INSTALL_TIMEOUT_MS / 1000}s.`,
+            ),
+          );
+          return;
+        }
 
-      const fullCommand = [command, ...args].join(" ");
-      reject(new Error(`Command "${fullCommand}" failed with exit code ${code ?? "unknown"}.`));
-    });
+        if (code === 0) {
+          resolve();
+          return;
+        }
+
+        const fullCommand = [command, ...args].join(" ");
+        reject(new Error(`Command "${fullCommand}" failed with exit code ${code ?? "unknown"}.`));
+      })
+      .catch((error: unknown) => {
+        cleanup();
+        const reason = error instanceof Error ? error.message : "Unknown spawn error";
+        reject(new Error(`Failed to run "${command}": ${reason}`));
+      });
   });
 }

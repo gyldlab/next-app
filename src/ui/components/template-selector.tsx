@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { type BaseTemplateInfo } from "../../core/templates.js";
+import type { BaseTemplateInfo } from "../../types/templates.js";
 
 export interface TemplateSelectorProps {
   templates: BaseTemplateInfo[];

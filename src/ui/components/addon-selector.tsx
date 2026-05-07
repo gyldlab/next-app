@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { type AddonInfo, type BaseTemplateInfo } from "../../core/templates.js";
+import type { AddonInfo, BaseTemplateInfo } from "../../types/templates.js";
 
 export interface AddonSelectorProps {
   selectedTemplate: BaseTemplateInfo;

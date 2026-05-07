@@ -1,4 +1,3 @@
-// Selection result from interactive mode
 export type InteractiveResult = {
   projectName: string;
   templateId: string;

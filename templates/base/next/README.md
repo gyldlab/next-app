@@ -38,7 +38,7 @@ This scaffold ships with a production-ready Next.js base and optional add-on tra
 Add-ons stay opt-in during scaffolding, but the template supports these tracks out of the box:
 
 - **shadcn** — shadcn/ui component library (`components.json`, `src/lib/utils.ts`)
-- **elysia** — Type-safe backend with Eden Treaty, Drizzle-backed `admin_users` auth, and Bun-native backend utility scripts powered by Effect (`app/api/[[...slugs]]/route.ts`, `src/modules/`, `src/lib/db/`, `scripts/`, `drizzle.config.ts`)
+- **elysia** — Type-safe backend with Eden Treaty, Drizzle-backed `admin_users` auth, and Bun-native backend utility scripts powered by Effect (`src/app/api/[[...slugs]]/route.ts`, `src/modules/`, `src/lib/db/`, `scripts/`, `drizzle.config.ts`)
 - **gsap-lenis** — GSAP animations + Lenis smooth scrolling (`src/lib/gsap.ts`, `src/components/gsap-lenis-provider.tsx`)
 
 If you scaffolded with add-ons, see their generated files and local documentation for the full contract.

@@ -1,37 +1,19 @@
-import type { Dirent } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { joinPath, resolvePath } from "../utils/path.js";
+import { readdir, readTextFile, type Dirent } from "../utils/runtime-fs.js";
+import type {
+  BaseTemplateManifest,
+  BaseTemplateInfo,
+  AddonManifest,
+  AddonInfo,
+} from "../types/templates.js";
 
-export type BaseTemplateManifest = {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly default?: boolean;
-};
+export type { BaseTemplateManifest, BaseTemplateInfo, AddonManifest, AddonInfo };
 
-export type BaseTemplateInfo = BaseTemplateManifest & {
-  readonly directory: string;
-};
-
-export type AddonManifest = {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly scripts?: Readonly<Record<string, string>>;
-  readonly dependencies?: Readonly<Record<string, string>>;
-  readonly devDependencies?: Readonly<Record<string, string>>;
-};
-
-export type AddonInfo = AddonManifest & {
-  readonly directory: string;
-};
-
-const currentDirectory = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(currentDirectory, "..", "..");
-const templatesRoot = join(repositoryRoot, "templates");
-const baseTemplatesRoot = join(templatesRoot, "base");
-const addonsRoot = join(templatesRoot, "addons");
+const currentDirectory = import.meta.dir;
+const repositoryRoot = resolvePath(currentDirectory, "..", "..");
+const templatesRoot = joinPath(repositoryRoot, "templates");
+const baseTemplatesRoot = joinPath(templatesRoot, "base");
+const addonsRoot = joinPath(templatesRoot, "addons");
 
 export async function getBaseTemplates(): Promise<BaseTemplateInfo[]> {
   let entries: Dirent<string>[];
@@ -55,8 +37,8 @@ export async function getBaseTemplates(): Promise<BaseTemplateInfo[]> {
       continue;
     }
 
-    const directory = join(baseTemplatesRoot, entry.name);
-    const manifestPath = join(directory, "template.json");
+    const directory = joinPath(baseTemplatesRoot, entry.name);
+    const manifestPath = joinPath(directory, "template.json");
     const manifest = await readBaseManifest(manifestPath, entry.name);
 
     templates.push({
@@ -91,8 +73,8 @@ export async function getAddons(): Promise<AddonInfo[]> {
       continue;
     }
 
-    const directory = join(addonsRoot, entry.name);
-    const manifestPath = join(directory, "addon.json");
+    const directory = joinPath(addonsRoot, entry.name);
+    const manifestPath = joinPath(directory, "addon.json");
     const manifest = await readAddonManifest(manifestPath, entry.name);
 
     addons.push({
@@ -110,7 +92,7 @@ async function readBaseManifest(
   fallbackId: string,
 ): Promise<BaseTemplateManifest> {
   try {
-    const content = await readFile(manifestPath, "utf8");
+    const content = await readTextFile(manifestPath);
     const raw = JSON.parse(content) as Partial<BaseTemplateManifest>;
 
     return {
@@ -127,7 +109,7 @@ async function readBaseManifest(
 
 async function readAddonManifest(manifestPath: string, fallbackId: string): Promise<AddonManifest> {
   try {
-    const content = await readFile(manifestPath, "utf8");
+    const content = await readTextFile(manifestPath);
     const raw = JSON.parse(content) as Partial<AddonManifest>;
 
     return {
