@@ -2,6 +2,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 export type PackageManager = "bun" | "npm" | "pnpm" | "yarn";
 
+export type PackageExecutor = {
+  readonly command: string;
+  readonly args: readonly string[];
+};
+
 // Timeout for dependency installation (5 minutes)
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -53,6 +58,31 @@ export function detectPackageManager(): PackageManager {
 
 export function formatRunDevCommand(packageManager: PackageManager): string {
   return packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
+}
+
+export function getPackageManagerDlxCommand(packageManager: PackageManager): PackageExecutor {
+  switch (packageManager) {
+    case "bun":
+      return {
+        command: "bunx",
+        args: [],
+      };
+    case "npm":
+      return {
+        command: "npx",
+        args: [],
+      };
+    case "pnpm":
+      return {
+        command: "pnpm",
+        args: ["dlx"],
+      };
+    case "yarn":
+      return {
+        command: "yarn",
+        args: ["dlx"],
+      };
+  }
 }
 
 export async function installDependencies(

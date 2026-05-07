@@ -1,25 +1,22 @@
 export type RunCommandOptions = {
   readonly cwd: string;
+  readonly env?: Record<string, string | undefined>;
 };
 
-export type AddonManifest = {
-  readonly skills?: {
-    readonly bundled?: string[];
+function getSpawnOptions(options: RunCommandOptions) {
+  return {
+    cwd: options.cwd,
+    ...(options.env ? { env: options.env } : {}),
   };
-};
-
-export type SkillsLockfile = {
-  readonly skills?: Record<string, unknown>;
-};
+}
 
 export function runCommand(
   command: string,
   args: readonly string[],
   options: RunCommandOptions,
 ): void {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
@@ -35,9 +32,8 @@ export function runCommandOutput(
   args: readonly string[],
   options: RunCommandOptions,
 ): string {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -55,9 +51,8 @@ export function commandSucceeds(
   args: readonly string[],
   options: RunCommandOptions,
 ): boolean {
-  const result = Bun.spawnSync({
-    cmd: [command, ...args],
-    cwd: options.cwd,
+  const result = Bun.spawnSync([command, ...args], {
+    ...getSpawnOptions(options),
     stdout: "ignore",
     stderr: "ignore",
   });
@@ -69,101 +64,71 @@ export function decodeOutput(output: Uint8Array | null | undefined): string {
   return new TextDecoder().decode(output ?? new Uint8Array());
 }
 
-export function dirnamePath(path: string): string {
-  const separatorIndex = path.lastIndexOf("/");
-
-  if (separatorIndex <= 0) {
-    return "/";
-  }
-
-  return path.slice(0, separatorIndex);
-}
-
-export function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path);
-}
-
 export function buildCli(repositoryRoot: string): void {
   runCommand("bun", ["run", "build"], {
     cwd: repositoryRoot,
   });
 }
 
-export async function verifyGeneratedSkills(
-  requiredSkills: readonly string[],
-  generatedProjectDirectory: string,
-  repositoryRoot: string,
-): Promise<void> {
-  const agentsSkillsDirectory = `${generatedProjectDirectory}/.agents/skills`;
-  const claudeSkillsDirectory = `${generatedProjectDirectory}/.claude/skills`;
-  const skillsLockPath = `${generatedProjectDirectory}/skills-lock.json`;
+export async function createMockPackageExecutors(
+  temporaryRoot: string,
+): Promise<{ readonly env: Record<string, string | undefined>; readonly logPath: string }> {
+  const binDirectory = `${temporaryRoot}/mock-bin`;
+  const logPath = `${temporaryRoot}/mock-package-exec.log`;
+  const executables = ["bunx", "npx", "pnpm", "yarn"] as const;
 
-  for (const skillId of requiredSkills) {
-    const agentsSkillPath = `${agentsSkillsDirectory}/${skillId}`;
+  await Bun.$`mkdir -p ${binDirectory}`;
 
-    if (!commandSucceeds("test", ["-d", agentsSkillPath], { cwd: repositoryRoot })) {
-      throw new Error(`Expected ${agentsSkillPath} to be a directory.`);
-    }
-
-    const claudeSkillPath = `${claudeSkillsDirectory}/${skillId}`;
-
-    if (!commandSucceeds("test", ["-L", claudeSkillPath], { cwd: repositoryRoot })) {
-      throw new Error(`Expected ${claudeSkillPath} to be a symlink.`);
-    }
-
-    const claudeLinkTarget = runCommandOutput("readlink", [claudeSkillPath], {
-      cwd: repositoryRoot,
-    });
-    if (isAbsolutePath(claudeLinkTarget)) {
-      throw new Error(`Expected ${claudeSkillPath} to use a relative symlink target.`);
-    }
-
-    const resolvedClaudeTarget = runCommandOutput(
-      "realpath",
-      [`${dirnamePath(claudeSkillPath)}/${claudeLinkTarget}`],
-      {
-        cwd: repositoryRoot,
-      },
+  for (const executableName of executables) {
+    const executablePath = `${binDirectory}/${executableName}`;
+    await Bun.write(
+      executablePath,
+      [
+        "#!/bin/sh",
+        `printf \"%s\\n\" \"${executableName} $*\" >> \"${logPath}\"`,
+        "exit 0",
+        "",
+      ].join("\n"),
     );
-    const resolvedAgentsSkillPath = runCommandOutput("realpath", [agentsSkillPath], {
-      cwd: repositoryRoot,
+    runCommand("chmod", ["755", executablePath], {
+      cwd: temporaryRoot,
     });
+  }
 
-    if (resolvedClaudeTarget !== resolvedAgentsSkillPath) {
+  return {
+    env: {
+      ...process.env,
+      PATH: `${binDirectory}:${process.env.PATH ?? ""}`,
+    },
+    logPath,
+  };
+}
+
+export async function verifyPackageExecutorCommands(
+  expectedCommands: readonly string[],
+  logPath: string,
+): Promise<void> {
+  if (!(await Bun.file(logPath).exists())) {
+    throw new Error(`Expected package executor log at ${logPath}.`);
+  }
+
+  const rawLog = await Bun.file(logPath).text();
+  const actualCommands = rawLog
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (actualCommands.length !== expectedCommands.length) {
+    throw new Error(
+      `Expected ${expectedCommands.length} package executor calls but found ${actualCommands.length}.`,
+    );
+  }
+
+  for (const [index, expectedCommand] of expectedCommands.entries()) {
+    if (actualCommands[index] !== expectedCommand) {
       throw new Error(
-        [
-          `Unexpected symlink target for ${claudeSkillPath}.`,
-          `Expected: ${resolvedAgentsSkillPath}`,
-          `Resolved: ${resolvedClaudeTarget}`,
-        ].join("\n"),
+        `Expected executor call ${index + 1} to be "${expectedCommand}" but got "${actualCommands[index]}".`,
       );
     }
   }
-
-  const parsedLockfile = (await Bun.file(skillsLockPath).json()) as SkillsLockfile;
-  const lockedSkills = Object.keys(parsedLockfile.skills ?? {}).sort();
-  const expectedSkills = [...requiredSkills].sort();
-
-  if (lockedSkills.length !== expectedSkills.length) {
-    throw new Error(
-      `Expected ${expectedSkills.length} locked skills but found ${lockedSkills.length}.`,
-    );
-  }
-
-  for (const expectedSkillId of expectedSkills) {
-    if (!lockedSkills.includes(expectedSkillId)) {
-      throw new Error(`Expected skills-lock.json to include ${expectedSkillId}.`);
-    }
-  }
-}
-
-export async function getExpectedBundledSkills(addonManifestPath: string): Promise<string[]> {
-  const parsedManifest = (await Bun.file(addonManifestPath).json()) as AddonManifest;
-  const bundledSkills = parsedManifest.skills?.bundled;
-
-  if (!Array.isArray(bundledSkills) || bundledSkills.length === 0) {
-    throw new Error(`Expected ${addonManifestPath} to define skills.bundled.`);
-  }
-
-  return bundledSkills;
 }

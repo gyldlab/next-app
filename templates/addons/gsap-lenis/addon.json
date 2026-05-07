@@ -3,21 +3,8 @@
   "name": "GSAP + Lenis",
   "description": "Adds animation and smooth scrolling dependencies.",
   "dependencies": {
-    "gsap": "^3.14.2",
+    "gsap": "^3.15.0",
     "@gsap/react": "^2.1.2",
-    "lenis": "^1.3.21"
-  },
-  "skills": {
-    "source": "https://github.com/greensock/gsap-skills",
-    "bundled": [
-      "gsap-core",
-      "gsap-performance",
-      "gsap-plugins",
-      "gsap-react",
-      "gsap-scrolltrigger",
-      "gsap-timeline",
-      "gsap-utils"
-    ],
-    "updateCheckCommand": "npx skills check"
+    "lenis": "^1.3.23"
   }
 }

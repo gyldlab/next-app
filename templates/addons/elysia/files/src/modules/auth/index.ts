@@ -4,9 +4,17 @@ import { AuthModel } from "./model";
 
 export const authModule = new Elysia({ prefix: "/auth" }).post(
   "/sign-in",
-  async ({ body, cookie: { session } }) => {
+  async ({ body, cookie: { session }, status }) => {
     const response = await Auth.signIn(body);
-    session!.value = response.token;
+
+    if (!response) {
+      return status(400, "Invalid username or password" satisfies AuthModel["signInInvalid"]);
+    }
+
+    if (session) {
+      session.value = response.token;
+    }
+
     return response;
   },
   {

@@ -5,20 +5,12 @@ import { type BaseTemplateInfo, type AddonInfo } from "../../core/templates.js";
 import { AppLayout } from "./app-layout.js";
 
 export interface ListModeProps {
-  logoOffset: number;
-  textOffset: number;
   templates: BaseTemplateInfo[];
   addons: AddonInfo[];
   config: AnimationConfig;
 }
 
-export const ListMode: React.FC<ListModeProps> = ({
-  logoOffset,
-  textOffset,
-  templates,
-  addons,
-  config,
-}) => {
+export const ListMode: React.FC<ListModeProps> = ({ templates, addons, config }) => {
   const { exit } = useApp();
 
   useInput((input, key) => {
@@ -27,34 +19,90 @@ export const ListMode: React.FC<ListModeProps> = ({
     }
   });
 
+  // Each template = 3 lines, each addon = 3 lines, plus headings/spacing
+  const listLines = 6 + templates.length * 3 + addons.length * 3;
+
   return (
-    <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
-      <Text> </Text>
-      <Text bold color="cyan">
-        Base templates:
-      </Text>
-      {templates.map((t) => (
-        <Box key={t.id} flexDirection="column" marginLeft={1}>
-          <Text color="yellow">
-            • {t.id} {t.default ? "(default)" : ""}
-          </Text>
-          <Text> {t.name}</Text>
-          <Text dimColor> {t.description}</Text>
-        </Box>
-      ))}
-      <Text> </Text>
-      <Text bold color="cyan">
-        Add-ons:
-      </Text>
-      {addons.map((a) => (
-        <Box key={a.id} flexDirection="column" marginLeft={1}>
-          <Text color="yellow">• {a.id}</Text>
-          <Text> {a.name}</Text>
-          <Text dimColor> {a.description}</Text>
-        </Box>
-      ))}
-      <Text> </Text>
-      <Text dimColor>Press 'q' or Escape to exit</Text>
+    <AppLayout config={config} childrenLines={listLines}>
+      {(bodyLines) => {
+        let remaining = Math.max(1, bodyLines);
+        const lines: React.ReactNode[] = [];
+
+        const push = (node: React.ReactNode) => {
+          if (remaining <= 0) return;
+          lines.push(node);
+          remaining -= 1;
+        };
+
+        push(<Text key="space-top"> </Text>);
+        push(
+          <Text key="templates-title" bold color="cyan" wrap="truncate-end">
+            Base templates:
+          </Text>,
+        );
+
+        for (const template of templates) {
+          if (remaining < 3) break;
+          push(
+            <Text key={`template-id-${template.id}`} color="yellow" wrap="truncate-end">
+              • {template.id} {template.default ? "(default)" : ""}
+            </Text>,
+          );
+          push(
+            <Text key={`template-name-${template.id}`} wrap="truncate-end">
+              {template.name}
+            </Text>,
+          );
+          push(
+            <Text key={`template-desc-${template.id}`} dimColor wrap="truncate-end">
+              {template.description}
+            </Text>,
+          );
+        }
+
+        if (remaining > 0) {
+          push(<Text key="space-mid"> </Text>);
+        }
+
+        if (remaining > 0) {
+          push(
+            <Text key="addons-title" bold color="cyan" wrap="truncate-end">
+              Add-ons:
+            </Text>,
+          );
+        }
+
+        for (const addon of addons) {
+          if (remaining < 3) break;
+          push(
+            <Text key={`addon-id-${addon.id}`} color="yellow" wrap="truncate-end">
+              • {addon.id}
+            </Text>,
+          );
+          push(
+            <Text key={`addon-name-${addon.id}`} wrap="truncate-end">
+              {addon.name}
+            </Text>,
+          );
+          push(
+            <Text key={`addon-desc-${addon.id}`} dimColor wrap="truncate-end">
+              {addon.description}
+            </Text>,
+          );
+        }
+
+        if (remaining > 0) {
+          push(<Text key="space-bottom"> </Text>);
+        }
+
+        push(
+          <Text key="footer" dimColor wrap="truncate-end">
+            Press 'q' or Escape to exit
+          </Text>,
+        );
+
+        return <>{lines}</>;
+      }}
     </AppLayout>
   );
 };

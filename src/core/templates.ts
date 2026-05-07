@@ -18,6 +18,7 @@ export type AddonManifest = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  readonly scripts?: Readonly<Record<string, string>>;
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly devDependencies?: Readonly<Record<string, string>>;
 };
@@ -133,6 +134,7 @@ async function readAddonManifest(manifestPath: string, fallbackId: string): Prom
       id: raw.id?.trim() || fallbackId,
       name: raw.name?.trim() || fallbackId,
       description: raw.description?.trim() || "No description provided.",
+      scripts: raw.scripts ?? {},
       dependencies: raw.dependencies ?? {},
       devDependencies: raw.devDependencies ?? {},
     };

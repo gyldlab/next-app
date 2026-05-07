@@ -14,8 +14,8 @@ This add-on installs shadcn/ui with the following:
 
 - `components.json` - shadcn configuration
 - `src/lib/utils.ts` - `cn()` utility function
-- `.agents/skills/shadcn/` - AI agent skill with rules and examples
-- `.claude/skills/shadcn` - Symlink to agent skill
+
+Generated projects also install the `shadcn/ui` agent skill with the scaffold command, using the active package manager executor (`bunx`, `npx`, `pnpm dlx`, or `yarn dlx`).
 
 ## Configuration
 
@@ -54,7 +54,7 @@ bunx --bun shadcn@latest search form
 
 ## Skills
 
-The bundled `shadcn` skill provides:
+The installed `shadcn` skill provides:
 
 - Component composition patterns
 - Form handling with Field/FieldGroup
@@ -64,9 +64,3 @@ The bundled `shadcn` skill provides:
 - Common mistakes and fixes
 
 Skills source: `https://github.com/shadcn-ui/ui`
-
-To check for updates:
-
-```bash
-bun x skills check
-```

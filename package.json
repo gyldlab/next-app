@@ -78,6 +78,7 @@
     "@types/prompts": "^2.4.9",
     "@types/react": "^19.2.14",
     "asciify-image": "^0.1.10",
+    "effect": "^3.21.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.5.3",

@@ -17,62 +17,6 @@ import { AddonSelector } from "./components/addon-selector.js";
 import { NameInput } from "./components/name-input.js";
 import { ListMode } from "./components/list-mode.js";
 
-// ── Hooks ───────────────────────────────────────────────────────────
-
-/** Drives the logo + text sweep animations via two offset counters.
- *  Both counters advance inside a single shared interval so React can
- *  batch the setState calls into one render – preventing jitter from
- *  two independent intervals firing close together. */
-function useLogoAnimation(config: AnimationConfig) {
-  const [logoOffset, setLogoOffset] = useState(0);
-  const [textOffset, setTextOffset] = useState(0);
-
-  useEffect(() => {
-    const logoEnabled = config.logo.enabled;
-    const textEnabled = config.text.enabled;
-    if (!logoEnabled && !textEnabled) return;
-
-    // Run one interval at the GCD of both speeds so each animation
-    // still advances at its own rate, but within the same callback.
-    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-    const tickMs =
-      logoEnabled && textEnabled
-        ? gcd(config.logo.speedMs, config.text.speedMs)
-        : logoEnabled
-          ? config.logo.speedMs
-          : config.text.speedMs;
-
-    let logoAccum = 0;
-    let textAccum = 0;
-
-    const id = setInterval(() => {
-      logoAccum += tickMs;
-      textAccum += tickMs;
-
-      // Both setState calls inside one callback → React batches → one render
-      if (logoEnabled && logoAccum >= config.logo.speedMs) {
-        logoAccum = 0;
-        setLogoOffset((prev) => (prev + 1) % config.logo.cycleLength);
-      }
-      if (textEnabled && textAccum >= config.text.speedMs) {
-        textAccum = 0;
-        setTextOffset((prev) => (prev + 1) % config.text.cycleLength);
-      }
-    }, tickMs);
-
-    return () => clearInterval(id);
-  }, [
-    config.logo.enabled,
-    config.logo.speedMs,
-    config.logo.cycleLength,
-    config.text.enabled,
-    config.text.speedMs,
-    config.text.cycleLength,
-  ]);
-
-  return { logoOffset, textOffset };
-}
-
 // ── InteractiveApp ──────────────────────────────────────────────────
 
 type Phase = "enteringName" | "selectingTemplate" | "selectingAddons" | "creating";
@@ -95,7 +39,6 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   onComplete,
 }) => {
   const { exit } = useApp();
-  const { logoOffset, textOffset } = useLogoAnimation(config);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>(projectName ? "selectingTemplate" : "enteringName");
@@ -220,20 +163,12 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   // ── Render ──────────────────────────────────────────────────────
 
   if (mode === "list") {
-    return (
-      <ListMode
-        logoOffset={logoOffset}
-        textOffset={textOffset}
-        templates={templates}
-        addons={addons}
-        config={config}
-      />
-    );
+    return <ListMode templates={templates} addons={addons} config={config} />;
   }
 
   if (phase === "enteringName") {
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+      <AppLayout config={config} childrenLines={6}>
         <NameInput value={inputProjectName} />
       </AppLayout>
     );
@@ -241,7 +176,7 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
 
   if (phase === "creating") {
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
+      <AppLayout config={config} childrenLines={2}>
         <Text> </Text>
         <Text color="green">Creating project with template: {selectedTemplate?.id}...</Text>
       </AppLayout>
@@ -249,24 +184,41 @@ const InteractiveApp: React.FC<InteractiveAppProps> = ({
   }
 
   if (phase === "selectingAddons" && selectedTemplate) {
+    // 8 chrome lines + 2 per addon (name + description placeholder)
+    const addonLines = 8 + addons.length * 2;
     return (
-      <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
-        <AddonSelector
-          selectedTemplate={selectedTemplate}
-          addons={addons}
-          selectedAddons={selectedAddons}
-          focusedIndex={addonIndex}
-        />
+      <AppLayout config={config} childrenLines={addonLines}>
+        {(bodyLines) => (
+          <AddonSelector
+            selectedTemplate={selectedTemplate}
+            addons={addons}
+            selectedAddons={selectedAddons}
+            focusedIndex={addonIndex}
+            viewportLines={bodyLines}
+          />
+        )}
       </AppLayout>
     );
   }
 
   // Default: template selection
+  // 5 chrome lines (margins + heading + footer) + 1 per template
+  const templateLines = 5 + templates.length;
   return (
-    <AppLayout logoOffset={logoOffset} textOffset={textOffset} config={config}>
-      <TemplateSelector templates={templates} selectedIndex={selectedIndex} />
-      <Text> </Text>
-      <Text dimColor>Press 'q' or Escape to exit</Text>
+    <AppLayout config={config} childrenLines={templateLines}>
+      {(bodyLines) => (
+        <>
+          <TemplateSelector
+            templates={templates}
+            selectedIndex={selectedIndex}
+            viewportLines={Math.max(1, bodyLines - 2)}
+          />
+          <Text> </Text>
+          <Text dimColor wrap="truncate-end">
+            Press 'q' or Escape to exit
+          </Text>
+        </>
+      )}
     </AppLayout>
   );
 };

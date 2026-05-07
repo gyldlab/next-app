@@ -10,9 +10,11 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import pc from "picocolors";
 import prompts from "prompts";
+import { getSkillInstallSpecs } from "../config/skills.js";
 import {
   getAddons,
   getBaseTemplates,
@@ -22,6 +24,7 @@ import {
 import {
   detectPackageManager,
   formatRunDevCommand,
+  getPackageManagerDlxCommand,
   installDependencies,
   type PackageManager,
 } from "../utils/package-manager.js";
@@ -34,6 +37,11 @@ export type CreateCommandOptions = {
   readonly install: boolean;
   readonly packageManager?: PackageManager | undefined;
 };
+
+const SHADCN_SKILL_ID = "shadcn/ui";
+const SHADCN_SKILL_ROOT_DIRECTORIES = [".claude", ".agents"] as const;
+const SHADCN_SKILL_REMOVED_ENTRIES = ["agents", "assets"] as const;
+const SHADCN_SKILL_USER_INVOCABLE_PATTERN = /^user-invocable: false\r?\n/m;
 
 export async function runCreateCommand(options: CreateCommandOptions): Promise<void> {
   const baseTemplates = await getBaseTemplates();
@@ -51,8 +59,9 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
   const targetDirectory = resolve(process.cwd(), projectName);
   // For ".", use current directory name as package name
   const packageName = projectName === "." ? basename(process.cwd()) : projectName;
+  const packageManager = options.packageManager ?? detectPackageManager();
 
-  await ensureTargetDirectoryIsUsable(targetDirectory);
+  await ensureTargetDirectoryIsUsable(targetDirectory, baseTemplate, selectedAddons);
 
   console.log(pc.cyan(`Scaffolding ${packageName} using base template ${baseTemplate.id}...`));
 
@@ -75,9 +84,7 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
   await renameIfExists(join(targetDirectory, "gitignore"), join(targetDirectory, ".gitignore"));
 
   await rewritePackageName(targetDirectory, packageName);
-
-  // Use explicit package manager if provided, otherwise auto-detect
-  const packageManager = options.packageManager ?? detectPackageManager();
+  await installAgentSkills(targetDirectory, baseTemplate, selectedAddons, packageManager);
 
   if (options.install) {
     console.log(pc.cyan(`Installing dependencies with ${packageManager}...`));
@@ -323,11 +330,38 @@ function validateProjectName(projectName: string): string {
   return projectName;
 }
 
-async function ensureTargetDirectoryIsUsable(targetDirectory: string): Promise<void> {
+const PROJECT_MARKERS = [
+  ".next",
+  "bun.lock",
+  "bun.lockb",
+  "node_modules",
+  "package-lock.json",
+  "package.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+];
+const LEGACY_SKILL_TEMPLATE_ENTRIES = new Set([".agents", ".claude", "skills-lock.json"]);
+
+async function ensureTargetDirectoryIsUsable(
+  targetDirectory: string,
+  baseTemplate: BaseTemplateInfo,
+  selectedAddons: readonly AddonInfo[],
+): Promise<void> {
   try {
     const entries = await readdir(targetDirectory);
-    if (entries.length > 0) {
-      throw new Error(`Target directory "${targetDirectory}" is not empty.`);
+    if (entries.length === 0) {
+      return;
+    }
+
+    const scaffoldedEntries = await getScaffoldedTopLevelEntries(baseTemplate, selectedAddons);
+    const blockedEntries = [...new Set([...scaffoldedEntries, ...PROJECT_MARKERS])].filter(
+      (entry) => entries.includes(entry),
+    );
+
+    if (blockedEntries.length > 0) {
+      throw new Error(
+        `Target directory "${targetDirectory}" contains existing project files that would conflict with scaffolding: ${blockedEntries.join(", ")}.`,
+      );
     }
   } catch (error) {
     if (isNodeErrorWithCode(error, "ENOENT")) {
@@ -337,6 +371,49 @@ async function ensureTargetDirectoryIsUsable(targetDirectory: string): Promise<v
 
     if (isNodeErrorWithCode(error, "ENOTDIR")) {
       throw new Error(`Target path "${targetDirectory}" already exists and is not a directory.`);
+    }
+
+    throw error;
+  }
+}
+
+async function getScaffoldedTopLevelEntries(
+  baseTemplate: BaseTemplateInfo,
+  selectedAddons: readonly AddonInfo[],
+): Promise<string[]> {
+  const topLevelEntries = new Set(
+    await getTopLevelEntries(baseTemplate.directory, new Set(["template.json"])),
+  );
+
+  for (const addon of selectedAddons) {
+    const addonFilesDirectory = join(addon.directory, "files");
+    const addonEntries = await getTopLevelEntries(
+      addonFilesDirectory,
+      LEGACY_SKILL_TEMPLATE_ENTRIES,
+    );
+
+    for (const entry of addonEntries) {
+      topLevelEntries.add(entry);
+    }
+  }
+
+  return [...topLevelEntries];
+}
+
+async function getTopLevelEntries(
+  directory: string,
+  ignoredEntries: ReadonlySet<string> = new Set(),
+): Promise<string[]> {
+  try {
+    const entries = await readdir(directory, {
+      withFileTypes: true,
+      encoding: "utf8",
+    });
+
+    return entries.map((entry) => entry.name).filter((entryName) => !ignoredEntries.has(entryName));
+  } catch (error) {
+    if (isNodeErrorWithCode(error, "ENOENT")) {
+      return [];
     }
 
     throw error;
@@ -375,109 +452,54 @@ async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<vo
   const addonFilesDirectory = join(addon.directory, "files");
 
   try {
-    // First, merge skills-lock.json if it exists (before cp overwrites it)
-    await mergeSkillsLockfile(targetDirectory, addonFilesDirectory);
-
     await cp(addonFilesDirectory, targetDirectory, {
       recursive: true,
       force: true,
-      // Skip skills-lock.json since we handle it separately via merge
-      filter: (src) => !src.endsWith("skills-lock.json"),
+      filter: (src) => shouldCopyAddonPath(addonFilesDirectory, src),
     });
-    await restoreTemplateSymlinks(addonFilesDirectory, targetDirectory);
   } catch (error) {
     if (!isNodeErrorWithCode(error, "ENOENT")) {
       throw error;
     }
   }
 
-  await mergeAddonDependencies(targetDirectory, addon);
+  await mergeAddonPackageJson(targetDirectory, addon);
 }
 
-type SkillsLockfile = {
-  lockfileVersion?: number;
-  version?: number;
-  skills?: Record<string, unknown>;
+type ScaffoldPackageJson = {
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
 };
 
-async function mergeSkillsLockfile(
-  targetDirectory: string,
-  addonFilesDirectory: string,
-): Promise<void> {
-  const targetLockPath = join(targetDirectory, "skills-lock.json");
-  const addonLockPath = join(addonFilesDirectory, "skills-lock.json");
+type ScaffoldPackageJsonSection = "scripts" | "dependencies" | "devDependencies";
 
-  // Check if addon has a skills-lock.json
-  let addonLockfile: SkillsLockfile;
-  try {
-    const rawAddonLock = await readFile(addonLockPath, "utf8");
-    addonLockfile = JSON.parse(rawAddonLock) as SkillsLockfile;
-  } catch {
-    // Addon doesn't have a skills-lock.json, nothing to merge
+function mergePackageJsonSection(
+  packageJson: ScaffoldPackageJson,
+  section: ScaffoldPackageJsonSection,
+  additions: Readonly<Record<string, string>> | undefined,
+): void {
+  if (!additions || Object.keys(additions).length === 0) {
     return;
   }
 
-  // Check if target already has a skills-lock.json
-  let targetLockfile: SkillsLockfile;
-  try {
-    const rawTargetLock = await readFile(targetLockPath, "utf8");
-    targetLockfile = JSON.parse(rawTargetLock) as SkillsLockfile;
-  } catch {
-    // Target doesn't have one yet, just copy the addon's lockfile
-    await writeFile(targetLockPath, JSON.stringify(addonLockfile, null, 2) + "\n", "utf8");
-    return;
-  }
-
-  // Merge skills from both lockfiles
-  const mergedSkills = {
-    ...(targetLockfile.skills ?? {}),
-    ...(addonLockfile.skills ?? {}),
+  packageJson[section] = {
+    ...(packageJson[section] ?? {}),
+    ...additions,
   };
-
-  // Build merged lockfile, only including defined version keys
-  const mergedLockfile: Record<string, unknown> = {
-    skills: mergedSkills,
-  };
-
-  // Prefer lockfileVersion, fall back to version
-  const lockVersion = targetLockfile.lockfileVersion ?? addonLockfile.lockfileVersion;
-  const version = targetLockfile.version ?? addonLockfile.version;
-
-  if (lockVersion !== undefined) {
-    mergedLockfile.lockfileVersion = lockVersion;
-  } else if (version !== undefined) {
-    mergedLockfile.version = version;
-  }
-
-  await writeFile(targetLockPath, JSON.stringify(mergedLockfile, null, 2) + "\n", "utf8");
 }
 
-async function mergeAddonDependencies(targetDirectory: string, addon: AddonInfo): Promise<void> {
+async function mergeAddonPackageJson(targetDirectory: string, addon: AddonInfo): Promise<void> {
   const packageJsonPath = join(targetDirectory, "package.json");
 
   try {
     const rawPackageJson = await readFile(packageJsonPath, "utf8");
-    const packageJson = JSON.parse(rawPackageJson) as {
-      dependencies?: Record<string, string>;
-      devDependencies?: Record<string, string>;
-      [key: string]: unknown;
-    };
+    const packageJson = JSON.parse(rawPackageJson) as ScaffoldPackageJson;
 
-    const addonDependencies = addon.dependencies ?? {};
-    if (Object.keys(addonDependencies).length > 0) {
-      packageJson.dependencies = {
-        ...(packageJson.dependencies ?? {}),
-        ...addonDependencies,
-      };
-    }
-
-    const addonDevDependencies = addon.devDependencies ?? {};
-    if (Object.keys(addonDevDependencies).length > 0) {
-      packageJson.devDependencies = {
-        ...(packageJson.devDependencies ?? {}),
-        ...addonDevDependencies,
-      };
-    }
+    mergePackageJsonSection(packageJson, "scripts", addon.scripts);
+    mergePackageJsonSection(packageJson, "dependencies", addon.dependencies);
+    mergePackageJsonSection(packageJson, "devDependencies", addon.devDependencies);
 
     await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
   } catch (error) {
@@ -496,6 +518,108 @@ function isNodeErrorWithCode(error: unknown, code: string): boolean {
     "code" in error &&
     (error as { readonly code?: string }).code === code
   );
+}
+
+async function installAgentSkills(
+  targetDirectory: string,
+  baseTemplate: BaseTemplateInfo,
+  selectedAddons: readonly AddonInfo[],
+  packageManager: PackageManager,
+): Promise<void> {
+  const skillSpecs = getSkillInstallSpecs(
+    baseTemplate.id,
+    selectedAddons.map((addon) => addon.id),
+  );
+
+  if (skillSpecs.length === 0) {
+    return;
+  }
+
+  const executor = getPackageManagerDlxCommand(packageManager);
+  console.log(pc.cyan(`Installing agent skills with ${packageManager}...`));
+
+  for (const skillSpec of skillSpecs) {
+    await runScaffoldCommand(
+      executor.command,
+      [...executor.args, ...skillSpec.args],
+      targetDirectory,
+    );
+
+    if (skillSpec.id === SHADCN_SKILL_ID) {
+      await cleanupInstalledShadcnSkill(targetDirectory);
+    }
+  }
+}
+
+async function cleanupInstalledShadcnSkill(targetDirectory: string): Promise<void> {
+  for (const rootDirectory of SHADCN_SKILL_ROOT_DIRECTORIES) {
+    const skillDirectory = join(targetDirectory, rootDirectory, "skills", "shadcn");
+
+    for (const removedEntry of SHADCN_SKILL_REMOVED_ENTRIES) {
+      await rm(join(skillDirectory, removedEntry), { recursive: true, force: true });
+    }
+
+    const skillFilePath = join(skillDirectory, "SKILL.md");
+
+    let skillFileContent: string;
+    try {
+      skillFileContent = await readFile(skillFilePath, "utf8");
+    } catch (error) {
+      if (isNodeErrorWithCode(error, "ENOENT")) {
+        continue;
+      }
+
+      throw error;
+    }
+
+    const cleanedSkillFileContent = skillFileContent.replace(
+      SHADCN_SKILL_USER_INVOCABLE_PATTERN,
+      "",
+    );
+
+    if (cleanedSkillFileContent !== skillFileContent) {
+      await writeFile(skillFilePath, cleanedSkillFileContent, "utf8");
+    }
+  }
+}
+
+function shouldCopyAddonPath(addonFilesDirectory: string, sourcePath: string): boolean {
+  const relativeSourcePath = relative(addonFilesDirectory, sourcePath);
+
+  if (relativeSourcePath.length === 0) {
+    return true;
+  }
+
+  const [topLevelEntry = ""] = relativeSourcePath.split(/[\\/]/);
+  return !LEGACY_SKILL_TEMPLATE_ENTRIES.has(topLevelEntry);
+}
+
+function runScaffoldCommand(command: string, args: readonly string[], cwd: string): Promise<void> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, [...args], {
+      cwd,
+      env: process.env,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
+
+    child.once("error", (error) => {
+      rejectPromise(new Error(`Failed to run "${command}": ${error.message}`));
+    });
+
+    child.once("exit", (code) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+
+      rejectPromise(
+        new Error(
+          `Command "${[command, ...args].join(" ")}" failed with exit code ${code ?? "unknown"}.`,
+        ),
+      );
+    });
+  });
 }
 
 type TemplateSymlink = {

@@ -1,14 +1,33 @@
 {
   "id": "elysia",
   "name": "Elysia",
-  "description": "Type-safe, high-performance backend framework integrated with Next.js App Router via MVC pattern.",
-  "dependencies": {
-    "elysia": "^1.3.3",
-    "@elysiajs/eden": "^1.3.3"
+  "description": "Type-safe, high-performance backend framework integrated with Next.js App Router via MVC pattern, Bun-native backend utility scripts, and Effect-based runtime guards.",
+  "scripts": {
+    "auth:hash": "bun scripts/generate-password-hash.ts",
+    "auth:register-admin": "bun scripts/register-admin.ts",
+    "auth:remove-admin": "bun scripts/remove-admin.ts",
+    "db:connect": "bun scripts/db-test-connection.ts",
+    "db:export": "bun scripts/db-export.ts",
+    "db:export:sql": "bun scripts/db-export.ts --format=plain",
+    "db:export:custom": "bun scripts/db-export.ts --format=custom",
+    "db:verify": "bun scripts/db-verify-schema.ts",
+    "db:status": "bun scripts/db-status.ts",
+    "db:seed": "bun scripts/db-seed.ts",
+    "db:reset": "bun scripts/db-reset.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
-  "skills": {
-    "source": "https://github.com/elysiajs/documentation",
-    "bundled": ["elysiajs"],
-    "updateCheckCommand": "bun x skills check"
+  "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
+    "drizzle-orm": "^0.45.2",
+    "elysia": "^1.4.28",
+    "effect": "^3.21.2",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.13",
+    "drizzle-kit": "^0.31.10"
   }
 }
