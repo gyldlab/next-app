@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { toValidPackageName } from "./project-name.js";
+import { toValidPackageName } from "../../src/utils/project-name.js";
 
 describe("toValidPackageName", () => {
   it("normalizes spaces and casing", () => {

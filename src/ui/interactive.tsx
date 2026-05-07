@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { render, Text, useApp, useInput } from "ink";
-import {
-  getBaseTemplates,
-  getAddons,
-  type BaseTemplateInfo,
-  type AddonInfo,
-} from "../core/templates.js";
+import { getBaseTemplates, getAddons } from "../core/templates.js";
+import type { BaseTemplateInfo, AddonInfo } from "../types/templates.js";
 import { runCreateCommand } from "../commands/create.js";
 import animationConfig, { type AnimationConfig } from "../config/animation.js";
-import { type InteractiveResult } from "./types.js";
-import { type PackageManager } from "../utils/package-manager.js";
+import { type InteractiveResult } from "../types/ui.js";
+import { type PackageManager } from "../types/package-manager.js";
 import { setInteractiveActive } from "../cli.js";
 import { AppLayout } from "./components/app-layout.js";
 import { TemplateSelector } from "./components/template-selector.js";
@@ -266,26 +262,39 @@ export async function runInteractiveMode(
     />,
   );
 
-  // Ensure clean teardown on unexpected signals: restore primary screen buffer,
-  // show cursor, etc. so the terminal is never left in a corrupted state.
-  const teardown = () => {
-    unmount();
+  let terminalRestored = false;
+
+  const restoreTerminal = (shouldUnmount = false) => {
+    if (terminalRestored) {
+      return;
+    }
+
+    terminalRestored = true;
+
+    if (shouldUnmount) {
+      unmount();
+    }
+
     cleanup();
     stdout.write(showCursor + leaveAltScreen);
     setInteractiveActive(false);
+    process.removeListener("SIGINT", teardown);
+    process.removeListener("SIGTERM", teardown);
+  };
+
+  // Ensure clean teardown on unexpected signals: restore primary screen buffer,
+  // show cursor, etc. so the terminal is never left in a corrupted state.
+  const teardown = () => {
+    restoreTerminal(true);
   };
   process.once("SIGINT", teardown);
   process.once("SIGTERM", teardown);
 
-  await waitUntilExit();
-
-  // Normal exit: restore terminal
-  stdout.write(showCursor + leaveAltScreen);
-  setInteractiveActive(false);
-
-  // Remove our listeners so they don't fire after Ink has already exited
-  process.removeListener("SIGINT", teardown);
-  process.removeListener("SIGTERM", teardown);
+  try {
+    await waitUntilExit();
+  } finally {
+    restoreTerminal();
+  }
 
   // After Ink exits, run the create command if we have a result
   if (ref.result) {

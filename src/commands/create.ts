@@ -1,42 +1,32 @@
-import {
-  cp,
-  lstat,
-  mkdir,
-  readFile,
-  readdir,
-  readlink,
-  rename,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { basename, dirname, join, relative, resolve } from "node:path";
 import pc from "picocolors";
 import prompts from "prompts";
+import { generateHomePage } from "./home-page-template.js";
 import { getSkillInstallSpecs } from "../config/skills.js";
-import {
-  getAddons,
-  getBaseTemplates,
-  type AddonInfo,
-  type BaseTemplateInfo,
-} from "../core/templates.js";
+import { getAddons, getBaseTemplates } from "../core/templates.js";
+import type { AddonInfo, BaseTemplateInfo } from "../types/templates.js";
 import {
   detectPackageManager,
   formatRunDevCommand,
   getPackageManagerDlxCommand,
   installDependencies,
-  type PackageManager,
 } from "../utils/package-manager.js";
+import type { PackageManager } from "../types/package-manager.js";
+import { basenamePath, dirnamePath, joinPath, relativePath, resolvePath } from "../utils/path.js";
+import {
+  cp,
+  lstat,
+  mkdir,
+  readTextFile,
+  readdir,
+  readlink,
+  rename,
+  rm,
+  symlink,
+  writeTextFile,
+} from "../utils/runtime-fs.js";
 import { toValidPackageName } from "../utils/project-name.js";
 
-export type CreateCommandOptions = {
-  readonly projectName: string | undefined;
-  readonly templateId: string | undefined;
-  readonly addons: string | undefined;
-  readonly install: boolean;
-  readonly packageManager?: PackageManager | undefined;
-};
+import type { CreateCommandOptions } from "../types/cli.js";
 
 const SHADCN_SKILL_ID = "shadcn/ui";
 const SHADCN_SKILL_ROOT_DIRECTORIES = [".claude", ".agents"] as const;
@@ -56,9 +46,9 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
   const projectName = await resolveProjectName(options.projectName);
   const baseTemplate = await resolveBaseTemplate(baseTemplates, options.templateId);
   const selectedAddons = await resolveAddons(availableAddons, options.addons);
-  const targetDirectory = resolve(process.cwd(), projectName);
+  const targetDirectory = resolvePath(projectName);
   // For ".", use current directory name as package name
-  const packageName = projectName === "." ? basename(process.cwd()) : projectName;
+  const packageName = projectName === "." ? basenamePath(process.cwd()) : projectName;
   const packageManager = options.packageManager ?? detectPackageManager();
 
   await ensureTargetDirectoryIsUsable(targetDirectory, baseTemplate, selectedAddons);
@@ -68,7 +58,7 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
   await cp(baseTemplate.directory, targetDirectory, {
     recursive: true,
     force: false,
-    filter: (source) => basename(source) !== "template.json",
+    filter: (source) => basenamePath(source) !== "template.json",
   });
   await restoreTemplateSymlinks(baseTemplate.directory, targetDirectory, ["template.json"]);
 
@@ -81,7 +71,15 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
     }
   }
 
-  await renameIfExists(join(targetDirectory, "gitignore"), join(targetDirectory, ".gitignore"));
+  await writeTextFile(
+    joinPath(targetDirectory, "src", "app", "page.tsx"),
+    generateHomePage(selectedAddons.map((addon) => addon.id)),
+  );
+
+  await renameIfExists(
+    joinPath(targetDirectory, "gitignore"),
+    joinPath(targetDirectory, ".gitignore"),
+  );
 
   await rewritePackageName(targetDirectory, packageName);
   await installAgentSkills(targetDirectory, baseTemplate, selectedAddons, packageManager);
@@ -91,7 +89,7 @@ export async function runCreateCommand(options: CreateCommandOptions): Promise<v
     await installDependencies(packageManager, targetDirectory);
   }
 
-  const relativeTargetDirectory = relative(process.cwd(), targetDirectory) || ".";
+  const relativeTargetDirectory = relativePath(process.cwd(), targetDirectory) || ".";
   console.log(pc.green("\nProject ready.\n"));
   console.log("Next steps:");
   if (relativeTargetDirectory !== ".") {
@@ -386,7 +384,7 @@ async function getScaffoldedTopLevelEntries(
   );
 
   for (const addon of selectedAddons) {
-    const addonFilesDirectory = join(addon.directory, "files");
+    const addonFilesDirectory = joinPath(addon.directory, "files");
     const addonEntries = await getTopLevelEntries(
       addonFilesDirectory,
       LEGACY_SKILL_TEMPLATE_ENTRIES,
@@ -431,14 +429,14 @@ async function renameIfExists(sourcePath: string, destinationPath: string): Prom
 }
 
 async function rewritePackageName(targetDirectory: string, projectName: string): Promise<void> {
-  const packageJsonPath = join(targetDirectory, "package.json");
+  const packageJsonPath = joinPath(targetDirectory, "package.json");
 
   try {
-    const rawPackageJson = await readFile(packageJsonPath, "utf8");
+    const rawPackageJson = await readTextFile(packageJsonPath);
     const packageJson = JSON.parse(rawPackageJson) as Record<string, unknown>;
     packageJson.name = toValidPackageName(projectName);
 
-    await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
+    await writeTextFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   } catch (error) {
     if (isNodeErrorWithCode(error, "ENOENT")) {
       return;
@@ -449,7 +447,7 @@ async function rewritePackageName(targetDirectory: string, projectName: string):
 }
 
 async function applyAddon(targetDirectory: string, addon: AddonInfo): Promise<void> {
-  const addonFilesDirectory = join(addon.directory, "files");
+  const addonFilesDirectory = joinPath(addon.directory, "files");
 
   try {
     await cp(addonFilesDirectory, targetDirectory, {
@@ -491,17 +489,17 @@ function mergePackageJsonSection(
 }
 
 async function mergeAddonPackageJson(targetDirectory: string, addon: AddonInfo): Promise<void> {
-  const packageJsonPath = join(targetDirectory, "package.json");
+  const packageJsonPath = joinPath(targetDirectory, "package.json");
 
   try {
-    const rawPackageJson = await readFile(packageJsonPath, "utf8");
+    const rawPackageJson = await readTextFile(packageJsonPath);
     const packageJson = JSON.parse(rawPackageJson) as ScaffoldPackageJson;
 
     mergePackageJsonSection(packageJson, "scripts", addon.scripts);
     mergePackageJsonSection(packageJson, "dependencies", addon.dependencies);
     mergePackageJsonSection(packageJson, "devDependencies", addon.devDependencies);
 
-    await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
+    await writeTextFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   } catch (error) {
     if (isNodeErrorWithCode(error, "ENOENT")) {
       return;
@@ -553,17 +551,17 @@ async function installAgentSkills(
 
 async function cleanupInstalledShadcnSkill(targetDirectory: string): Promise<void> {
   for (const rootDirectory of SHADCN_SKILL_ROOT_DIRECTORIES) {
-    const skillDirectory = join(targetDirectory, rootDirectory, "skills", "shadcn");
+    const skillDirectory = joinPath(targetDirectory, rootDirectory, "skills", "shadcn");
 
     for (const removedEntry of SHADCN_SKILL_REMOVED_ENTRIES) {
-      await rm(join(skillDirectory, removedEntry), { recursive: true, force: true });
+      await rm(joinPath(skillDirectory, removedEntry), { recursive: true, force: true });
     }
 
-    const skillFilePath = join(skillDirectory, "SKILL.md");
+    const skillFilePath = joinPath(skillDirectory, "SKILL.md");
 
     let skillFileContent: string;
     try {
-      skillFileContent = await readFile(skillFilePath, "utf8");
+      skillFileContent = await readTextFile(skillFilePath);
     } catch (error) {
       if (isNodeErrorWithCode(error, "ENOENT")) {
         continue;
@@ -578,13 +576,13 @@ async function cleanupInstalledShadcnSkill(targetDirectory: string): Promise<voi
     );
 
     if (cleanedSkillFileContent !== skillFileContent) {
-      await writeFile(skillFilePath, cleanedSkillFileContent, "utf8");
+      await writeTextFile(skillFilePath, cleanedSkillFileContent);
     }
   }
 }
 
 function shouldCopyAddonPath(addonFilesDirectory: string, sourcePath: string): boolean {
-  const relativeSourcePath = relative(addonFilesDirectory, sourcePath);
+  const relativeSourcePath = relativePath(addonFilesDirectory, sourcePath);
 
   if (relativeSourcePath.length === 0) {
     return true;
@@ -596,29 +594,39 @@ function shouldCopyAddonPath(addonFilesDirectory: string, sourcePath: string): b
 
 function runScaffoldCommand(command: string, args: readonly string[], cwd: string): Promise<void> {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(command, [...args], {
-      cwd,
-      env: process.env,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
+    let child: ReturnType<typeof Bun.spawn>;
 
-    child.once("error", (error) => {
-      rejectPromise(new Error(`Failed to run "${command}": ${error.message}`));
-    });
+    try {
+      child = Bun.spawn([command, ...args], {
+        cwd,
+        env: process.env,
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Unknown spawn error";
+      rejectPromise(new Error(`Failed to run "${command}": ${reason}`));
+      return;
+    }
 
-    child.once("exit", (code) => {
-      if (code === 0) {
-        resolvePromise();
-        return;
-      }
+    child.exited
+      .then((code) => {
+        if (code === 0) {
+          resolvePromise();
+          return;
+        }
 
-      rejectPromise(
-        new Error(
-          `Command "${[command, ...args].join(" ")}" failed with exit code ${code ?? "unknown"}.`,
-        ),
-      );
-    });
+        rejectPromise(
+          new Error(
+            `Command "${[command, ...args].join(" ")}" failed with exit code ${code ?? "unknown"}.`,
+          ),
+        );
+      })
+      .catch((error: unknown) => {
+        const reason = error instanceof Error ? error.message : "Unknown spawn error";
+        rejectPromise(new Error(`Failed to run "${command}": ${reason}`));
+      });
   });
 }
 
@@ -636,9 +644,9 @@ async function restoreTemplateSymlinks(
   const templateSymlinks = await collectTemplateSymlinks(sourceRoot, sourceRoot, ignoredPathSet);
 
   for (const templateSymlink of templateSymlinks) {
-    const destinationPath = join(destinationRoot, templateSymlink.relativePath);
+    const destinationPath = joinPath(destinationRoot, templateSymlink.relativePath);
     await removeExistingPath(destinationPath);
-    await mkdir(dirname(destinationPath), { recursive: true });
+    await mkdir(dirnamePath(destinationPath), { recursive: true });
     await symlink(templateSymlink.linkTarget, destinationPath);
   }
 }
@@ -656,17 +664,17 @@ async function collectTemplateSymlinks(
   const symlinks: TemplateSymlink[] = [];
 
   for (const entry of entries) {
-    const sourcePath = join(currentDirectory, entry.name);
-    const relativePath = relative(sourceRoot, sourcePath);
+    const sourcePath = joinPath(currentDirectory, entry.name);
+    const relativePathValue = relativePath(sourceRoot, sourcePath);
 
-    if (ignoredPathSet.has(relativePath)) {
+    if (ignoredPathSet.has(relativePathValue)) {
       continue;
     }
 
     if (entry.isSymbolicLink()) {
       const linkTarget = await readlink(sourcePath, "utf8");
       symlinks.push({
-        relativePath,
+        relativePath: relativePathValue,
         linkTarget,
       });
       continue;

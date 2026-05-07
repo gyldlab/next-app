@@ -23,7 +23,7 @@ src/
 │   │   └── schema.ts     # Drizzle schema entry point
 │   └── eden.ts           # Eden Treaty client
 
-app/api/[[...slugs]]/
+src/app/api/[[...slugs]]/
 └── route.ts              # Next.js API route mounting Elysia
 
 .env.example              # Environment variable template
@@ -46,7 +46,7 @@ app/api/[[...slugs]]/
 1. Create folder: `src/modules/posts/`
 2. Add files: `index.ts`, `service.ts`, `model.ts`
 3. Export from `src/modules/index.ts`
-4. Use in `app/api/[[...slugs]]/route.ts`
+4. Use in `src/app/api/[[...slugs]]/route.ts`
 
 ### Example Module
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import { type AnimationConfig } from "../../config/animation.js";
-import { type BaseTemplateInfo, type AddonInfo } from "../../core/templates.js";
+import type { BaseTemplateInfo, AddonInfo } from "../../types/templates.js";
 import { AppLayout } from "./app-layout.js";
 
 export interface ListModeProps {

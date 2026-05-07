@@ -58,7 +58,7 @@ async function verifyElysiaFiles(): Promise<void> {
   const modulesIndexPath = `${generatedProjectDirectory}/src/modules/index.ts`;
   const edenPath = `${generatedProjectDirectory}/src/lib/eden.ts`;
   const dbSchemaPath = `${generatedProjectDirectory}/src/lib/db/schema.ts`;
-  const apiRoutePath = `${generatedProjectDirectory}/app/api/[[...slugs]]/route.ts`;
+  const apiRoutePath = `${generatedProjectDirectory}/src/app/api/[[...slugs]]/route.ts`;
   const scriptsAgentsPath = `${generatedProjectDirectory}/scripts/AGENTS.md`;
   const scriptsRuntimePath = `${generatedProjectDirectory}/scripts/runtime.ts`;
   const passwordHashScriptPath = `${generatedProjectDirectory}/scripts/generate-password-hash.ts`;
