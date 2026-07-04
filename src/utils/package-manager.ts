@@ -64,13 +64,8 @@ export function getPackageManagerDlxCommand(packageManager: PackageManager): Pac
   switch (packageManager) {
     case "bun":
       return {
-        command: "bunx",
-        args: [],
-      };
-    case "npm":
-      return {
-        command: "npx",
-        args: [],
+        command: "bun",
+        args: ["x"],
       };
     case "pnpm":
       return {
@@ -81,6 +76,16 @@ export function getPackageManagerDlxCommand(packageManager: PackageManager): Pac
       return {
         command: "yarn",
         args: ["dlx"],
+      };
+    case "npm":
+      return {
+        command: "npx",
+        args: [],
+      };
+    default:
+      return {
+        command: "npx",
+        args: [],
       };
   }
 }
@@ -114,7 +119,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       child = Bun.spawn([command, ...args], {
         cwd,
         env: process.env,
-        stdin: "inherit",
+        stdin: "ignore",
         stdout: "inherit",
         stderr: "inherit",
       });

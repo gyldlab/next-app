@@ -600,7 +600,7 @@ function runScaffoldCommand(command: string, args: readonly string[], cwd: strin
       child = Bun.spawn([command, ...args], {
         cwd,
         env: process.env,
-        stdin: "inherit",
+        stdin: "ignore",
         stdout: "inherit",
         stderr: "inherit",
       });

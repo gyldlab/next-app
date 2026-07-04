@@ -6,9 +6,7 @@
     "moduleResolution": "NodeNext",
     "types": ["bun"],
     "noEmit": true,
-
     "jsx": "react-jsx",
-
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
