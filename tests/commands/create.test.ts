@@ -31,7 +31,7 @@ function getMockExecutorLogPath(): string {
 function getExecutorPrefix(packageManager: PackageManager): string {
   switch (packageManager) {
     case "bun":
-      return "bunx";
+      return "bun x";
     case "npm":
       return "npx";
     case "pnpm":
@@ -68,7 +68,7 @@ function getExpectedSkillCommands(
 async function installMockPackageExecutors(): Promise<void> {
   const mockBinDirectory = getMockBinDirectory();
   const logPath = getMockExecutorLogPath();
-  const executables = ["bunx", "npx", "pnpm", "yarn"] as const;
+  const executables = ["bun", "bunx", "npx", "pnpm", "yarn"] as const;
 
   await mkdir(mockBinDirectory, { recursive: true });
 
@@ -76,17 +76,20 @@ async function installMockPackageExecutors(): Promise<void> {
     const executablePath = joinPath(mockBinDirectory, executableName);
     await writeTextFile(
       executablePath,
-      [
-        "#!/bin/sh",
-        `printf \"%s\\n\" \"${executableName} $*\" >> \"${logPath}\"`,
-        "exit 0",
-        "",
-      ].join("\n"),
+      ["#!/bin/sh", `printf "%s\\n" "${executableName} $*" >> "${logPath}"`, "exit 0", ""].join(
+        "\n",
+      ),
     );
     await chmod(executablePath, 0o755);
+
+    if (process.platform === "win32") {
+      const cmdPath = joinPath(mockBinDirectory, `${executableName}.cmd`);
+      await writeTextFile(cmdPath, `@echo off\r\necho ${executableName} %* >> "${logPath}"\r\n`);
+    }
   }
 
-  process.env.PATH = `${mockBinDirectory}:${ORIGINAL_PATH}`;
+  const delimiter = process.platform === "win32" ? ";" : ":";
+  process.env.PATH = `${mockBinDirectory}${delimiter}${ORIGINAL_PATH}`;
 }
 
 async function readMockExecutorInvocations(): Promise<string[]> {
@@ -116,14 +119,22 @@ async function expectNoLegacySkillArtifacts(projectPath: string): Promise<void> 
 
 describe("runCreateCommand", () => {
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    try {
+      await rm(TEST_DIR, { recursive: true, force: true });
+    } catch (e) {
+      if (e && (e as any).code !== "EBUSY" && (e as any).code !== "ENOENT") throw e;
+    }
     await mkdir(TEST_DIR, { recursive: true });
     await installMockPackageExecutors();
   });
 
   afterEach(async () => {
     process.env.PATH = ORIGINAL_PATH;
-    await rm(TEST_DIR, { recursive: true, force: true });
+    try {
+      await rm(TEST_DIR, { recursive: true, force: true });
+    } catch (e) {
+      if (e && (e as any).code !== "EBUSY" && (e as any).code !== "ENOENT") throw e;
+    }
   });
 
   describe("base template only (no addons)", () => {
