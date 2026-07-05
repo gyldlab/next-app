@@ -117,6 +117,33 @@ You can proceed with just the base template (no add-ons) by pressing Enter witho
 
 Each add-on includes pre-configured AI coding skills for enhanced development assistance.
 
+## Out-of-the-box AI Skills
+
+The CLI installs AI skill packs automatically after scaffolding, based on the selected base template and add-ons.
+
+### Base template skills
+
+- **next** base template installs `vercel-labs/agent-skills` with:
+  - `vercel-composition-patterns`
+  - `vercel-react-best-practices`
+  - `vercel-react-view-transitions`
+  - `web-design-guidelines`
+
+### Add-on skills
+
+- **elysia** add-on installs `elysiajs/skills`
+- **gsap-lenis** add-on installs `greensock/gsap-skills` with:
+  - `gsap-core`
+  - `gsap-performance`
+  - `gsap-plugins`
+  - `gsap-react`
+  - `gsap-scrolltrigger`
+  - `gsap-timeline`
+  - `gsap-utils`
+- **shadcn** add-on installs `shadcn/ui`
+
+All skills are installed for both agent targets currently used by this CLI: `amp` and `claude-code`.
+
 ## Elysia Backend Ops
 
 Selecting the `elysia` add-on now scaffolds a backend operations toolkit alongside the MVC route/module structure:
